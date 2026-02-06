@@ -116,7 +116,9 @@ export default function AdminPage() {
 
   // 统计数据
   const stats = useMemo(() => {
-    const submissions = overview?.submissions ?? [];
+    const submissions = (overview?.submissions ?? []).filter(
+      (item) => item.student_name !== "组长"
+    );
     const subjects = overview?.subjects ?? [];
 
     // 批改状态统计

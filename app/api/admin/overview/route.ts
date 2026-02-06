@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const subjects = getSubjects();
 
   const submissions = Object.values(data.submissions)
-    .filter(Boolean)
+    .filter((submission) => Boolean(submission) && submission.student_name !== "组长")
     .sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
