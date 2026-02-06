@@ -12,6 +12,7 @@ import {
   TableRow,
   TextRun,
   WidthType,
+  TableLayoutType,
   AlignmentType,
   BorderStyle
 } from "docx";
@@ -107,31 +108,28 @@ export async function GET(request: Request) {
 
   // 创建表格行
   const tableRows: TableRow[] = [];
+  const columnWidths = [15, 20, 20, 20, 25];
+
+  function makeCell(text: string, width: number, bold = false) {
+    return new TableCell({
+      children: [
+        new Paragraph({
+          children: [new TextRun({ text, bold })]
+        })
+      ],
+      width: { size: width, type: WidthType.PERCENTAGE }
+    });
+  }
 
   // 表头
   tableRows.push(
     new TableRow({
       children: [
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "日期", bold: true })] })],
-          width: { size: 15, type: WidthType.PERCENTAGE }
-        }),
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "时间", bold: true })] })],
-          width: { size: 20, type: WidthType.PERCENTAGE }
-        }),
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "姓名", bold: true })] })],
-          width: { size: 20, type: WidthType.PERCENTAGE }
-        }),
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "科目", bold: true })] })],
-          width: { size: 20, type: WidthType.PERCENTAGE }
-        }),
-        new TableCell({
-          children: [new Paragraph({ children: [new TextRun({ text: "是否提交", bold: true })] })],
-          width: { size: 25, type: WidthType.PERCENTAGE }
-        })
+        makeCell("日期", columnWidths[0], true),
+        makeCell("时间", columnWidths[1], true),
+        makeCell("姓名", columnWidths[2], true),
+        makeCell("科目", columnWidths[3], true),
+        makeCell("是否提交", columnWidths[4], true)
       ]
     })
   );
@@ -148,21 +146,11 @@ export async function GET(request: Request) {
         tableRows.push(
           new TableRow({
             children: [
-              new TableCell({
-                children: [new Paragraph({ text: date })]
-              }),
-              new TableCell({
-                children: [new Paragraph({ text: time })]
-              }),
-              new TableCell({
-                children: [new Paragraph({ text: studentName })]
-              }),
-              new TableCell({
-                children: [new Paragraph({ text: subject })]
-              }),
-              new TableCell({
-                children: [new Paragraph({ text: status })]
-              })
+              makeCell(date, columnWidths[0]),
+              makeCell(time, columnWidths[1]),
+              makeCell(studentName, columnWidths[2]),
+              makeCell(subject, columnWidths[3]),
+              makeCell(status, columnWidths[4])
             ]
           })
         );
@@ -172,21 +160,11 @@ export async function GET(request: Request) {
     tableRows.push(
       new TableRow({
         children: [
-          new TableCell({
-            children: [new Paragraph({ text: start === end ? start : `${start} 至 ${end}` })]
-          }),
-          new TableCell({
-            children: [new Paragraph({ text: "-" })]
-          }),
-          new TableCell({
-            children: [new Paragraph({ text: "-" })]
-          }),
-          new TableCell({
-            children: [new Paragraph({ text: "-" })]
-          }),
-          new TableCell({
-            children: [new Paragraph({ text: "暂无提交" })]
-          })
+          makeCell(start === end ? start : `${start} 至 ${end}`, columnWidths[0]),
+          makeCell("-", columnWidths[1]),
+          makeCell("-", columnWidths[2]),
+          makeCell("-", columnWidths[3]),
+          makeCell("暂无提交", columnWidths[4])
         ]
       })
     );
@@ -220,7 +198,8 @@ export async function GET(request: Request) {
           }),
           new Table({
             rows: tableRows,
-            width: { size: 100, type: WidthType.PERCENTAGE }
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            layout: TableLayoutType.FIXED
           }),
           new Paragraph({
             children: [
