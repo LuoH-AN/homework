@@ -7,7 +7,8 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const existingCookieToken = await getToken();
-  if (existingCookieToken) {
+  const data = await loadData();
+  if (existingCookieToken && data.students[existingCookieToken]) {
     return NextResponse.json({ ok: true });
   }
 
@@ -21,7 +22,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const data = await loadData();
   const existingNameToken = data.name_index[name];
   if (existingNameToken) {
     const newToken = crypto.randomUUID();
