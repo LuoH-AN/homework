@@ -21,16 +21,9 @@ async function loadImageElement(file: File) {
   const img = new Image();
   img.decoding = "async";
   img.src = url;
-  if ("decode" in img) {
-    try {
-      await img.decode();
-    } catch {
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error("Image decode failed"));
-      });
-    }
-  } else {
+  try {
+    await img.decode();
+  } catch {
     await new Promise<void>((resolve, reject) => {
       img.onload = () => resolve();
       img.onerror = () => reject(new Error("Image decode failed"));
