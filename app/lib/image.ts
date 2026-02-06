@@ -1,15 +1,9 @@
+import type { EncodeOptions } from "@jsquash/avif/meta";
+
 const AVIF_MIME = "image/avif";
-const DEFAULT_AVIF_QUALITY = 0.8;
 const AVIF_UNSUPPORTED = "AVIF_UNSUPPORTED";
 
-type AvifOptions = {
-  quality?: number;
-};
-
-function clampQuality(value: number) {
-  if (Number.isNaN(value)) return DEFAULT_AVIF_QUALITY;
-  return Math.min(1, Math.max(0, value));
-}
+type AvifOptions = Partial<EncodeOptions>;
 
 function toAvifFilename(name: string) {
   if (!name) return "upload.avif";
@@ -39,7 +33,7 @@ async function loadImageElement(file: File) {
   return { img, revoke: () => URL.revokeObjectURL(url) };
 }
 
-async function drawToCanvas(file: File) {
+async function getImageData(file: File) {
   let bitmap: ImageBitmap | null = null;
   let revoke: (() => void) | null = null;
   let img: HTMLImageElement | null = null;
@@ -76,29 +70,29 @@ async function drawToCanvas(file: File) {
     return null;
   }
 
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
+  const cleanup = () => {
     if (bitmap && "close" in bitmap) bitmap.close();
     if (revoke) revoke();
-    return null;
-  }
-  ctx.imageSmoothingQuality = "high";
-  if (bitmap) {
-    ctx.drawImage(bitmap, 0, 0, width, height);
-  } else if (img) {
-    ctx.drawImage(img, 0, 0, width, height);
-  }
-
-  return {
-    canvas,
-    cleanup: () => {
-      if (bitmap && "close" in bitmap) bitmap.close();
-      if (revoke) revoke();
-    }
   };
+
+  try {
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      return null;
+    }
+    ctx.imageSmoothingQuality = "high";
+    if (bitmap) {
+      ctx.drawImage(bitmap, 0, 0, width, height);
+    } else if (img) {
+      ctx.drawImage(img, 0, 0, width, height);
+    }
+    return ctx.getImageData(0, 0, width, height);
+  } finally {
+    cleanup();
+  }
 }
 
 export async function compressImageToAvif(file: File, options: AvifOptions = {}) {
@@ -107,26 +101,20 @@ export async function compressImageToAvif(file: File, options: AvifOptions = {})
     throw new Error(AVIF_UNSUPPORTED);
   }
 
-  const quality = clampQuality(options.quality ?? DEFAULT_AVIF_QUALITY);
-  const prepared = await drawToCanvas(file);
-  if (!prepared) {
+  const imageData = await getImageData(file);
+  if (!imageData) {
     throw new Error(AVIF_UNSUPPORTED);
   }
 
-  const { canvas, cleanup } = prepared;
   try {
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob((result) => resolve(result), AVIF_MIME, quality)
-    );
-    if (!blob) {
-      throw new Error(AVIF_UNSUPPORTED);
-    }
-    return new File([blob], toAvifFilename(file.name), {
+    const { encode } = await import("@jsquash/avif");
+    const encoded = await encode(imageData, options);
+    return new File([encoded], toAvifFilename(file.name), {
       type: AVIF_MIME,
       lastModified: file.lastModified
     });
-  } finally {
-    cleanup();
+  } catch (err) {
+    throw new Error(AVIF_UNSUPPORTED);
   }
 }
 
