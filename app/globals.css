@@ -748,3 +748,172 @@ textarea::placeholder {
     padding: 18px;
   }
 }
+
+/* 统计区域样式 */
+.stats-overview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+.chart-container {
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  padding: 16px;
+}
+
+.chart-container.full-width {
+  grid-column: 1 / -1;
+}
+
+.chart-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+/* 导出日期选择器 */
+.export-dates {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+/* 作业状态样式 */
+.homework-status {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.status-group {
+  background: var(--surface-alt);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+
+.status-header {
+  font-weight: 600;
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.status-header.completed {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-header.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-header.expired {
+  background: #fecaca;
+  color: #991b1b;
+}
+
+.status-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--surface);
+  border-radius: 6px;
+}
+
+.status-item.completed {
+  border-left: 3px solid #22c55e;
+}
+
+.status-item.pending {
+  border-left: 3px solid #f59e0b;
+}
+
+.status-item.expired {
+  border-left: 3px solid #ef4444;
+}
+
+.due-date {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.expired-tag {
+  font-size: 12px;
+  background: #fecaca;
+  color: #991b1b;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+/* 归档作业样式 */
+.assignment-cards.archived .assignment-card {
+  opacity: 0.7;
+}
+
+.assignment-card.archived {
+  background: var(--surface-alt);
+}
+
+/* 危险按钮 */
+.button.ghost.danger {
+  color: #dc2626;
+}
+
+.button.ghost.danger:hover {
+  background: #fecaca;
+}
+
+/* 已过期作业列表 */
+.assignment-list.expired .assignment-item {
+  opacity: 0.7;
+}
+
+@media (max-width: 720px) {
+  .stats-overview {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-container.full-width {
+    grid-column: 1;
+  }
+
+  .export-dates {
+    grid-template-columns: 1fr;
+  }
+}

@@ -115,7 +115,7 @@ export default function HistoryPage() {
                   <div className="review-comment">{submission.review.comment}</div>
                 ) : null}
                 {submission.note ? (
-                  <div className="note">流言：{submission.note}</div>
+                  <div className="note">留言：{submission.note}</div>
                 ) : null}
                 {submission.updated_at !== submission.created_at ? (
                   <div className="meta">

@@ -2,6 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { formatLocal } from "../lib/format";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from "recharts";
 
 type ReviewInfo = {
   status: "pending" | "reviewed";
@@ -40,6 +53,12 @@ type OverviewResponse = {
 
 const STORAGE_KEY = "admin_secret";
 
+function getTomorrow() {
+  const date = new Date();
+  date.setDate(date.getDate() + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 export default function AdminPage() {
   const [secret, setSecret] = useState("");
   const [loading, setLoading] = useState(false);
@@ -48,7 +67,7 @@ export default function AdminPage() {
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [assignSubject, setAssignSubject] = useState("");
   const [assignTitle, setAssignTitle] = useState("");
-  const [assignDue, setAssignDue] = useState("");
+  const [assignDue, setAssignDue] = useState(getTomorrow());
   const [assignDesc, setAssignDesc] = useState("");
   const [reviewDrafts, setReviewDrafts] = useState<
     Record<string, { score: string; comment: string }>
@@ -60,6 +79,8 @@ export default function AdminPage() {
       { subject: string; title: string; description: string; due_date: string }
     >
   >({});
+  const [exportStartDate, setExportStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [exportEndDate, setExportEndDate] = useState(new Date().toISOString().slice(0, 10));
 
   const pendingSubmissions = useMemo(() => {
     return (
@@ -67,6 +88,82 @@ export default function AdminPage() {
         (item) => item.review?.status !== "reviewed"
       ) ?? []
     );
+  }, [overview]);
+
+  // 判断作业是否已过期
+  const isExpired = (dueDate?: string) => {
+    if (!dueDate) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(dueDate);
+    due.setHours(23, 59, 59, 999);
+    return due < today;
+  };
+
+  // 活跃的作业（未过期）
+  const activeAssignments = useMemo(() => {
+    return (overview?.assignments ?? []).filter(
+      (item) => item.active && !isExpired(item.due_date)
+    );
+  }, [overview]);
+
+  // 归档的作业（已过期）
+  const archivedAssignments = useMemo(() => {
+    return (overview?.assignments ?? []).filter(
+      (item) => !item.active || isExpired(item.due_date)
+    );
+  }, [overview]);
+
+  // 统计数据
+  const stats = useMemo(() => {
+    const submissions = overview?.submissions ?? [];
+    const subjects = overview?.subjects ?? [];
+
+    // 批改状态统计
+    const reviewed = submissions.filter((s) => s.review?.status === "reviewed").length;
+    const pending = submissions.filter((s) => s.review?.status !== "reviewed").length;
+
+    const reviewStats = [
+      { name: "已批改", value: reviewed, color: "#22c55e" },
+      { name: "待批改", value: pending, color: "#f59e0b" }
+    ];
+
+    // 按科目统计提交数量
+    const subjectStats = subjects.map((subject) => {
+      const count = submissions.filter((s) => s.subject === subject).length;
+      return { name: subject, 提交数: count };
+    });
+
+    // 今日提交统计
+    const today = new Date().toISOString().slice(0, 10);
+    const todaySubmissions = submissions.filter(
+      (s) => s.created_at.slice(0, 10) === today
+    ).length;
+
+    // 最近7天提交趋势
+    const last7Days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().slice(0, 10);
+      const count = submissions.filter(
+        (s) => s.created_at.slice(0, 10) === dateStr
+      ).length;
+      last7Days.push({
+        date: dateStr.slice(5), // MM-DD
+        提交数: count
+      });
+    }
+
+    return {
+      total: submissions.length,
+      reviewed,
+      pending,
+      todaySubmissions,
+      reviewStats,
+      subjectStats,
+      last7Days
+    };
   }, [overview]);
 
   useEffect(() => {
@@ -123,8 +220,8 @@ export default function AdminPage() {
     event.preventDefault();
     setError(null);
     setNotice(null);
-    if (!assignSubject || !assignTitle.trim()) {
-      setError("请填写科目与标题");
+    if (!assignSubject) {
+      setError("请选择科目");
       return;
     }
     setLoading(true);
@@ -161,8 +258,8 @@ export default function AdminPage() {
 
   async function handleAssignmentUpdate(assignmentId: string) {
     const draft = assignmentDrafts[assignmentId];
-    if (!draft?.subject || !draft?.title.trim()) {
-      setError("请填写科目与标题");
+    if (!draft?.subject) {
+      setError("请选择科目");
       return;
     }
     setLoading(true);
@@ -193,6 +290,61 @@ export default function AdminPage() {
       await loadOverview();
     } catch (err) {
       setError("更新失败，请稍后再试");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDeleteAssignment(assignmentId: string) {
+    if (!confirm("确定删除这个作业吗？")) return;
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/admin/assignment", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": secret
+        },
+        body: JSON.stringify({ id: assignmentId })
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        setError(payload?.error ?? "删除失败");
+        return;
+      }
+      setNotice("作业已删除");
+      await loadOverview();
+    } catch (err) {
+      setError("删除失败，请稍后再试");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCloseAssignment(assignmentId: string) {
+    setLoading(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/admin/assignment", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": secret
+        },
+        body: JSON.stringify({ id: assignmentId, active: false })
+      });
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        setError(payload?.error ?? "操作失败");
+        return;
+      }
+      setNotice("作业已截止");
+      await loadOverview();
+    } catch (err) {
+      setError("操作失败，请稍后再试");
     } finally {
       setLoading(false);
     }
@@ -242,7 +394,10 @@ export default function AdminPage() {
     setNotice(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/export", {
+      const params = new URLSearchParams();
+      params.set("start", exportStartDate);
+      params.set("end", exportEndDate);
+      const res = await fetch(`/api/admin/export?${params.toString()}`, {
         headers: { "x-admin-secret": secret }
       });
       if (!res.ok) {
@@ -254,12 +409,15 @@ export default function AdminPage() {
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement("a");
       anchor.href = url;
-      anchor.download = `homework-${new Date().toISOString().slice(0, 10)}.csv`;
+      const filename = exportStartDate === exportEndDate
+        ? `homework-${exportStartDate}.docx`
+        : `homework-${exportStartDate}-to-${exportEndDate}.docx`;
+      anchor.download = filename;
       document.body.appendChild(anchor);
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(url);
-      setNotice("已导出今日提交");
+      setNotice("导出成功");
     } catch (err) {
       setError("导出失败，请稍后再试");
     } finally {
@@ -310,6 +468,75 @@ export default function AdminPage() {
 
       {overview ? (
         <>
+          <section className="card animate-in">
+            <div className="section-title">数据统计</div>
+            <div className="stats-overview">
+              <div className="stat-card">
+                <div className="stat-number">{stats.total}</div>
+                <div className="stat-label">总提交数</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{stats.todaySubmissions}</div>
+                <div className="stat-label">今日提交</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{stats.reviewed}</div>
+                <div className="stat-label">已批改</div>
+              </div>
+              <div className="stat-card">
+                <div className="stat-number">{stats.pending}</div>
+                <div className="stat-label">待批改</div>
+              </div>
+            </div>
+            <div className="charts-grid">
+              <div className="chart-container">
+                <div className="chart-title">批改状态</div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={stats.reviewStats}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={70}
+                      label={({ name, value }) => `${name}: ${value}`}
+                    >
+                      {stats.reviewStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="chart-container">
+                <div className="chart-title">按科目统计</div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={stats.subjectStats}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="提交数" fill="#3b82f6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="chart-container full-width">
+                <div className="chart-title">最近7天提交趋势</div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={stats.last7Days}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="提交数" fill="#8b5cf6" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </section>
+
           <section className="card animate-in">
             <div className="section-title">布置作业</div>
             <form onSubmit={handleAssign}>
@@ -369,10 +596,10 @@ export default function AdminPage() {
           </section>
 
           <section className="animate-in">
-            <div className="section-title">已布置作业</div>
-            {overview.assignments.length ? (
+            <div className="section-title">已发布作业</div>
+            {activeAssignments.length ? (
               <div className="assignment-cards">
-                {overview.assignments.map((item) => {
+                {activeAssignments.map((item) => {
                   const draft = assignmentDrafts[item.id] ?? {
                     subject: item.subject,
                     title: item.title,
@@ -383,7 +610,7 @@ export default function AdminPage() {
                   return (
                     <div className="card assignment-card" key={item.id}>
                       <div className="assignment-title">
-                        {item.subject} · {item.title}
+                        {item.title ? `${item.subject} · ${item.title}` : item.subject}
                       </div>
                       {item.due_date ? (
                         <div className="assignment-meta">截止：{item.due_date}</div>
@@ -496,6 +723,20 @@ export default function AdminPage() {
                           >
                             编辑
                           </button>
+                          <button
+                            className="button ghost"
+                            type="button"
+                            onClick={() => handleCloseAssignment(item.id)}
+                          >
+                            立即截止
+                          </button>
+                          <button
+                            className="button ghost danger"
+                            type="button"
+                            onClick={() => handleDeleteAssignment(item.id)}
+                          >
+                            删除
+                          </button>
                         </div>
                       )}
                     </div>
@@ -503,16 +744,82 @@ export default function AdminPage() {
                 })}
               </div>
             ) : (
-              <div className="notice">暂无已布置作业</div>
+              <div className="notice">暂无已发布作业</div>
             )}
           </section>
 
+          {archivedAssignments.length ? (
+            <section className="animate-in">
+              <div className="section-title">归档作业</div>
+              <div className="assignment-cards archived">
+                {archivedAssignments.map((item) => (
+                  <div className="card assignment-card archived" key={item.id}>
+                    <div className="assignment-title">
+                      {item.title ? `${item.subject} · ${item.title}` : item.subject}
+                    </div>
+                    {item.due_date ? (
+                      <div className="assignment-meta">截止：{item.due_date}</div>
+                    ) : null}
+                    {item.description ? (
+                      <div className="assignment-desc">{item.description}</div>
+                    ) : null}
+                    <div className="assignment-actions">
+                      <button
+                        className="button ghost danger"
+                        type="button"
+                        onClick={() => handleDeleteAssignment(item.id)}
+                      >
+                        删除
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
           <section className="card animate-in">
-            <div className="section-title">导出今日提交</div>
-            <p className="hint">会导出今天提交的全部记录（CSV）。</p>
+            <div className="section-title">导出提交记录</div>
+            <p className="hint">选择日期范围，导出为 Word 文档。</p>
+            <div className="export-dates">
+              <div className="field">
+                <label htmlFor="export-start">开始日期</label>
+                <input
+                  id="export-start"
+                  type="date"
+                  value={exportStartDate}
+                  onChange={(event) => setExportStartDate(event.target.value)}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="export-end">结束日期</label>
+                <input
+                  id="export-end"
+                  type="date"
+                  value={exportEndDate}
+                  onChange={(event) => setExportEndDate(event.target.value)}
+                />
+              </div>
+            </div>
             <div className="form-actions">
-              <button className="button" type="button" onClick={handleExport}>
-                导出今日
+              <button className="button ghost" type="button" onClick={() => {
+                const today = new Date().toISOString().slice(0, 10);
+                setExportStartDate(today);
+                setExportEndDate(today);
+              }}>
+                今天
+              </button>
+              <button className="button ghost" type="button" onClick={() => {
+                const today = new Date();
+                const weekAgo = new Date(today);
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                setExportStartDate(weekAgo.toISOString().slice(0, 10));
+                setExportEndDate(today.toISOString().slice(0, 10));
+              }}>
+                最近一周
+              </button>
+              <button className="button" type="button" onClick={handleExport} disabled={loading}>
+                {loading ? "导出中…" : "导出 Word"}
               </button>
             </div>
           </section>
@@ -535,7 +842,7 @@ export default function AdminPage() {
                       <span className="review-pill">待批改</span>
                     </div>
                     {submission.note ? (
-                      <div className="note">流言：{submission.note}</div>
+                      <div className="note">留言：{submission.note}</div>
                     ) : null}
                     <div className="submission-images">
                       {submission.photo_file_ids.map((fileId, index) => (

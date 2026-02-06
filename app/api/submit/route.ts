@@ -9,6 +9,16 @@ import type { Submission } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+// 判断作业是否已过期
+function isExpired(dueDate?: string) {
+  if (!dueDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(23, 59, 59, 999);
+  return due < today;
+}
+
 export async function POST(request: Request) {
   const token = await getToken();
   if (!token) {
@@ -31,6 +41,15 @@ export async function POST(request: Request) {
 
   if (!subject || !subjects.includes(subject)) {
     return NextResponse.json({ error: "科目无效" }, { status: 400 });
+  }
+
+  // 检查该科目是否有活跃的未过期作业
+  const assignments = data.assignments ?? [];
+  const activeAssignment = assignments.find(
+    (item) => item.subject === subject && item.active && !isExpired(item.due_date)
+  );
+  if (!activeAssignment) {
+    return NextResponse.json({ error: "该科目没有可提交的作业或已过期" }, { status: 400 });
   }
 
   if (files.length === 0) {

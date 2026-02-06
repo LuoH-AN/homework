@@ -18,8 +18,8 @@ export async function POST(request: Request) {
 
   const subject = body.subject?.trim() ?? "";
   const title = body.title?.trim() ?? "";
-  if (!subject || !title) {
-    return NextResponse.json({ error: "请填写科目与标题" }, { status: 400 });
+  if (!subject) {
+    return NextResponse.json({ error: "请选择科目" }, { status: 400 });
   }
 
   const data = await loadData();
@@ -77,11 +77,7 @@ export async function PATCH(request: Request) {
   }
 
   if (Object.prototype.hasOwnProperty.call(body, "title")) {
-    const title = body.title?.trim() ?? "";
-    if (!title) {
-      return NextResponse.json({ error: "标题不能为空" }, { status: 400 });
-    }
-    assignment.title = title;
+    assignment.title = body.title?.trim() ?? "";
   }
 
   if (Object.prototype.hasOwnProperty.call(body, "description")) {
@@ -102,4 +98,31 @@ export async function PATCH(request: Request) {
   await saveData(data);
 
   return NextResponse.json({ ok: true, assignment });
+}
+
+export async function DELETE(request: Request) {
+  const guard = await requireAdmin(request);
+  if (guard) return guard;
+
+  const body = (await request.json().catch(() => ({}))) as {
+    id?: string;
+  };
+
+  const id = body.id?.trim() ?? "";
+  if (!id) {
+    return NextResponse.json({ error: "缺少作业编号" }, { status: 400 });
+  }
+
+  const data = await loadData();
+  const assignments = data.assignments ?? [];
+  const index = assignments.findIndex((item) => item.id === id);
+  if (index === -1) {
+    return NextResponse.json({ error: "作业不存在" }, { status: 404 });
+  }
+
+  assignments.splice(index, 1);
+  data.assignments = assignments;
+  await saveData(data);
+
+  return NextResponse.json({ ok: true });
 }

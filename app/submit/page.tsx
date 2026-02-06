@@ -5,6 +5,16 @@ import { useEffect, useMemo, useState } from "react";
 import { useMe } from "../components/me-context";
 import FilePicker from "../components/file-picker";
 
+// 判断作业是否已过期
+function isExpired(dueDate?: string) {
+  if (!dueDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(23, 59, 59, 999);
+  return due < today;
+}
+
 export default function SubmitPage() {
   const { loading, me, error: loadError, refresh } = useMe();
   const [subject, setSubject] = useState("");
@@ -16,6 +26,16 @@ export default function SubmitPage() {
 
   const subjects = useMemo(() => me?.subjects ?? [], [me]);
   const assignments = useMemo(() => me?.assignments ?? [], [me]);
+
+  // 活跃的作业（未过期）
+  const activeAssignments = useMemo(() => {
+    return assignments.filter((item) => item.active && !isExpired(item.due_date));
+  }, [assignments]);
+
+  // 已过期的作业
+  const expiredAssignments = useMemo(() => {
+    return assignments.filter((item) => !item.active || isExpired(item.due_date));
+  }, [assignments]);
 
   useEffect(() => {
     if (!subject && subjects.length) {
@@ -94,20 +114,39 @@ export default function SubmitPage() {
         <section className="card animate-in">加载中…</section>
       ) : (
         <>
-          {assignments.length ? (
+          {activeAssignments.length ? (
             <section className="card animate-in">
               <h2 className="section-title">当前作业</h2>
               <div className="assignment-list">
-                {assignments.map((item) => (
+                {activeAssignments.map((item) => (
                   <div className="assignment-item" key={item.id}>
                     <div className="assignment-title">
-                      {item.subject} · {item.title}
+                      {item.title ? `${item.subject} · ${item.title}` : item.subject}
                     </div>
                     {item.due_date ? (
                       <div className="assignment-meta">截止：{item.due_date}</div>
                     ) : null}
                     {item.description ? (
                       <div className="assignment-desc">{item.description}</div>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {expiredAssignments.length ? (
+            <section className="card animate-in">
+              <h2 className="section-title">已过期作业</h2>
+              <div className="assignment-list expired">
+                {expiredAssignments.map((item) => (
+                  <div className="assignment-item expired" key={item.id}>
+                    <div className="assignment-title">
+                      {item.title ? `${item.subject} · ${item.title}` : item.subject}
+                      <span className="expired-tag">已截止</span>
+                    </div>
+                    {item.due_date ? (
+                      <div className="assignment-meta">截止：{item.due_date}</div>
                     ) : null}
                   </div>
                 ))}
@@ -156,7 +195,7 @@ export default function SubmitPage() {
               hint="支持上传多张图片（最多 10 张）"
             />
             <div className="field">
-              <label htmlFor="note">流言（可选）</label>
+              <label htmlFor="note">留言（可选）</label>
               <textarea
                 id="note"
                 rows={3}

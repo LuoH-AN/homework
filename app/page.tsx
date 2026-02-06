@@ -5,6 +5,21 @@ import { useMemo } from "react";
 import { useMe } from "./components/me-context";
 import { formatDateOnly, formatLocal } from "./lib/format";
 
+// 判断作业是否已过期
+function isExpired(dueDate?: string) {
+  if (!dueDate) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(23, 59, 59, 999);
+  return due < today;
+}
+
+// 获取今天的日期字符串 (YYYY-MM-DD)
+function getTodayString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function Home() {
   const { loading, syncing, me, error } = useMe();
 
@@ -16,6 +31,44 @@ export default function Home() {
       const itemTime = new Date(item.updated_at).getTime();
       return itemTime > currentTime ? item : current;
     }, me.submissions[0]);
+  }, [me]);
+
+  // 计算作业状态
+  const assignmentStatus = useMemo(() => {
+    const assignments = me?.assignments ?? [];
+    const submissions = me?.submissions ?? [];
+    const today = getTodayString();
+
+    // 今天提交的科目
+    const submittedSubjectsToday = new Set(
+      submissions
+        .filter((s) => s.created_at.slice(0, 10) === today)
+        .map((s) => s.subject)
+    );
+
+    // 活跃的未过期作业
+    const activeAssignments = assignments.filter(
+      (item) => item.active && !isExpired(item.due_date)
+    );
+
+    // 已完成（今天已提交）
+    const completed = activeAssignments.filter((item) =>
+      submittedSubjectsToday.has(item.subject)
+    );
+
+    // 未完成（今天未提交且未过期）
+    const pending = activeAssignments.filter(
+      (item) => !submittedSubjectsToday.has(item.subject)
+    );
+
+    // 已逾期（有截止日期且已过期，且没有提交过）
+    const allSubmittedSubjects = new Set(submissions.map((s) => s.subject));
+    const expired = assignments.filter(
+      (item) =>
+        isExpired(item.due_date) && !allSubmittedSubjects.has(item.subject)
+    );
+
+    return { completed, pending, expired };
   }, [me]);
 
   const syncText = loading && !me ? "连接中" : syncing ? "同步中" : "已同步";
@@ -102,6 +155,52 @@ export default function Home() {
               <div className="hint">先完成登记，解锁提交与记录页面。</div>
             )}
           </section>
+
+          {me?.registered && (assignmentStatus.completed.length > 0 || assignmentStatus.pending.length > 0 || assignmentStatus.expired.length > 0) ? (
+            <section className="card animate-in">
+              <div className="section-title">今日作业状态</div>
+              <div className="homework-status">
+                {assignmentStatus.completed.length > 0 ? (
+                  <div className="status-group">
+                    <div className="status-header completed">已完成</div>
+                    <div className="status-items">
+                      {assignmentStatus.completed.map((item) => (
+                        <div key={item.id} className="status-item completed">
+                          {item.title ? `${item.subject} · ${item.title}` : item.subject}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {assignmentStatus.pending.length > 0 ? (
+                  <div className="status-group">
+                    <div className="status-header pending">未完成</div>
+                    <div className="status-items">
+                      {assignmentStatus.pending.map((item) => (
+                        <div key={item.id} className="status-item pending">
+                          {item.title ? `${item.subject} · ${item.title}` : item.subject}
+                          {item.due_date ? <span className="due-date">截止：{item.due_date}</span> : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                {assignmentStatus.expired.length > 0 ? (
+                  <div className="status-group">
+                    <div className="status-header expired">已逾期</div>
+                    <div className="status-items">
+                      {assignmentStatus.expired.map((item) => (
+                        <div key={item.id} className="status-item expired">
+                          {item.title ? `${item.subject} · ${item.title}` : item.subject}
+                          <span className="expired-tag">无法提交</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          ) : null}
 
           <section className="card animate-in">
             <div className="section-title">今日提醒</div>
