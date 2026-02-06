@@ -34,6 +34,11 @@ export function formatDateTime(date: Date, timeZone = DEFAULT_TIMEZONE) {
   return `${parts.get("year")}-${parts.get("month")}-${parts.get("day")} ${parts.get("hour")}:${parts.get("minute")}`;
 }
 
+export function formatMonthDay(date: Date, timeZone = DEFAULT_TIMEZONE) {
+  const parts = partsMap(date, timeZone);
+  return `${parts.get("month")}${parts.get("day")}`;
+}
+
 export function addHours(iso: string, hours: number) {
   const date = new Date(iso);
   date.setHours(date.getHours() + hours);

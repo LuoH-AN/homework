@@ -34,6 +34,32 @@ export async function sendHomeworkPhoto(file: File | Blob, caption: string) {
   return telegramCall<any>("sendPhoto", form);
 }
 
+export async function sendHomeworkPhotos(files: Array<File | Blob>, caption: string) {
+  if (files.length === 1) {
+    const message = await sendHomeworkPhoto(files[0], caption);
+    return [message];
+  }
+
+  const form = new FormData();
+  form.append("chat_id", HOMEWORK_CHAT_ID);
+  const media = files.map((file, index) => {
+    const item: Record<string, string> = {
+      type: "photo",
+      media: `attach://file${index}`
+    };
+    if (index === 0) {
+      item.caption = caption;
+    }
+    return item;
+  });
+  form.append("media", JSON.stringify(media));
+  files.forEach((file, index) => {
+    const filename = file instanceof File ? file.name : `homework-${index + 1}.jpg`;
+    form.append(`file${index}`, file, filename);
+  });
+  return telegramCall<any[]>("sendMediaGroup", form);
+}
+
 export async function sendStorageDocument(content: string, filename: string) {
   const form = new FormData();
   form.append("chat_id", STORAGE_CHAT_ID);

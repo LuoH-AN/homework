@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addHours, formatDate } from "@/lib/date";
+import { addHours } from "@/lib/date";
 import { getToken } from "@/lib/auth";
 import { getSubjects } from "@/lib/env";
 import { loadData } from "@/lib/store";
@@ -15,7 +15,8 @@ export async function GET() {
     return NextResponse.json({
       registered: false,
       subjects,
-      submissions: []
+      submissions: [],
+      assignments: (data.assignments ?? []).filter((item) => item.active)
     });
   }
 
@@ -30,18 +31,22 @@ export async function GET() {
     )
     .map((submission) => {
       const deadline = addHours(submission.created_at, 72);
+      const legacyId = (submission as { photo_file_id?: string }).photo_file_id;
       return {
         id: submission.id,
         subject: submission.subject,
         created_at: submission.created_at,
         updated_at: submission.updated_at,
-        photo_file_id: submission.photo_file_id,
+        photo_file_ids:
+          submission.photo_file_ids?.length > 0
+            ? submission.photo_file_ids
+            : legacyId
+              ? [legacyId]
+              : [],
         editable: new Date() <= new Date(deadline),
         edit_deadline: deadline,
-        tags: [
-          `#${submission.subject}`,
-          `#${formatDate(new Date(submission.created_at))}`
-        ]
+        note: submission.note ?? "",
+        review: submission.review ?? { status: "pending" }
       };
     });
 
@@ -49,6 +54,7 @@ export async function GET() {
     registered: true,
     student: { name: student.name },
     subjects,
-    submissions
+    submissions,
+    assignments: (data.assignments ?? []).filter((item) => item.active)
   });
 }

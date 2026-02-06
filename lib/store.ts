@@ -4,12 +4,98 @@ import { getStoragePinnedMessage, getFileById, pinStorageMessage, sendStorageDoc
 
 function createEmptyData(): DataFile {
   return {
-    version: 1,
+    version: 3,
     updated_at: nowIso(),
     students: {},
     name_index: {},
     submissions: {},
-    student_submissions: {}
+    student_submissions: {},
+    assignments: []
+  };
+}
+
+function normalizeSubmissions(rawSubmissions: Record<string, any>) {
+  return Object.fromEntries(
+    Object.entries(rawSubmissions ?? {}).map(([id, submission]) => {
+      if (!submission) return [id, submission];
+      const photoFileIds = submission.photo_file_ids ?? [];
+      const photoUniqueIds = submission.photo_unique_ids ?? [];
+      const messageIds = submission.tg_message_ids ?? [];
+
+      const normalized = {
+        ...submission,
+        photo_file_ids:
+          photoFileIds.length > 0
+            ? photoFileIds
+            : submission.photo_file_id
+              ? [submission.photo_file_id]
+              : [],
+        photo_unique_ids:
+          photoUniqueIds.length > 0
+            ? photoUniqueIds
+            : submission.photo_unique_id
+              ? [submission.photo_unique_id]
+              : undefined,
+        tg_message_ids:
+          messageIds.length > 0
+            ? messageIds
+            : submission.tg_message_id
+              ? [submission.tg_message_id]
+              : [],
+        history: (submission.history ?? []).map((entry: any) => ({
+          ...entry,
+          photo_file_ids:
+            entry.photo_file_ids?.length > 0
+              ? entry.photo_file_ids
+              : entry.photo_file_id
+                ? [entry.photo_file_id]
+                : [],
+          photo_unique_ids:
+            entry.photo_unique_ids?.length > 0
+              ? entry.photo_unique_ids
+              : entry.photo_unique_id
+                ? [entry.photo_unique_id]
+                : undefined,
+          tg_message_ids:
+            entry.tg_message_ids?.length > 0
+              ? entry.tg_message_ids
+              : entry.tg_message_id
+                ? [entry.tg_message_id]
+                : []
+        }))
+      };
+
+      delete normalized.photo_file_id;
+      delete normalized.photo_unique_id;
+      delete normalized.tg_message_id;
+
+      return [id, normalized];
+    })
+  );
+}
+
+function migrateData(raw: any): DataFile {
+  if (raw?.version === 3) {
+    return {
+      ...raw,
+      assignments: raw.assignments ?? []
+    } as DataFile;
+  }
+
+  if (raw?.version !== 1 && raw?.version !== 2) {
+    throw new Error("Invalid data file");
+  }
+
+  const submissions = normalizeSubmissions(raw.submissions ?? {});
+
+  return {
+    version: 3,
+    updated_at: raw.updated_at ?? nowIso(),
+    students: raw.students ?? {},
+    name_index: raw.name_index ?? {},
+    submissions,
+    student_submissions: raw.student_submissions ?? {},
+    assignments: raw.assignments ?? []
   };
 }
 
@@ -28,10 +114,7 @@ export async function loadData(): Promise<DataFile> {
   const text = await fileRes.text();
   try {
     const parsed = JSON.parse(text) as DataFile;
-    if (!parsed.version) {
-      throw new Error("Invalid data file");
-    }
-    return parsed;
+    return migrateData(parsed);
   } catch (err) {
     throw new Error("Failed to parse storage data file");
   }

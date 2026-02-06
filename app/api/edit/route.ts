@@ -3,7 +3,7 @@ import { buildEditCaption } from "@/lib/captions";
 import { getToken } from "@/lib/auth";
 import { loadData, saveData } from "@/lib/store";
 import { nowIso } from "@/lib/date";
-import { sendHomeworkPhoto } from "@/lib/telegram";
+import { sendHomeworkPhotos } from "@/lib/telegram";
 
 export const runtime = "nodejs";
 
@@ -21,14 +21,20 @@ export async function POST(request: Request) {
 
   const form = await request.formData();
   const submissionId = String(form.get("submission_id") ?? "").trim();
-  const file = form.get("image");
+  const files = form
+    .getAll("image")
+    .filter((entry): entry is File => entry instanceof File && entry.size > 0);
 
   if (!submissionId) {
     return NextResponse.json({ error: "缺少提交记录" }, { status: 400 });
   }
 
-  if (!(file instanceof File) || !file.size) {
+  if (files.length === 0) {
     return NextResponse.json({ error: "请上传图片" }, { status: 400 });
+  }
+
+  if (files.length > 10) {
+    return NextResponse.json({ error: "最多上传 10 张图片" }, { status: 400 });
   }
 
   const submission = data.submissions[submissionId];
@@ -46,26 +52,39 @@ export async function POST(request: Request) {
   const caption = buildEditCaption({
     name: student.name,
     subject: submission.subject,
-    createdAt: new Date(submission.created_at),
     updatedAt
   });
 
-  const message = await sendHomeworkPhoto(file, caption);
-  const photos = message?.photo ?? [];
-  const largest = photos[photos.length - 1];
-  if (!largest?.file_id) {
+  const messages = await sendHomeworkPhotos(files, caption);
+  const photoEntries = messages.map((message) => {
+    const photos = message?.photo ?? [];
+    const largest = photos[photos.length - 1];
+    return {
+      file_id: largest?.file_id,
+      file_unique_id: largest?.file_unique_id,
+      message_id: message?.message_id
+    };
+  });
+
+  if (photoEntries.length !== files.length || photoEntries.some((entry) => !entry.file_id)) {
     return NextResponse.json({ error: "Telegram 返回异常" }, { status: 500 });
   }
 
+  const photoFileIds = photoEntries.map((entry) => entry.file_id as string);
+  const photoUniqueIds = photoEntries
+    .map((entry) => entry.file_unique_id)
+    .filter(Boolean) as string[];
+  const messageIds = photoEntries.map((entry) => entry.message_id as number);
+
   submission.history.push({
     updated_at: submission.updated_at,
-    photo_file_id: submission.photo_file_id,
-    photo_unique_id: submission.photo_unique_id,
-    tg_message_id: submission.tg_message_id
+    photo_file_ids: submission.photo_file_ids,
+    photo_unique_ids: submission.photo_unique_ids,
+    tg_message_ids: submission.tg_message_ids
   });
-  submission.photo_file_id = largest.file_id;
-  submission.photo_unique_id = largest.file_unique_id;
-  submission.tg_message_id = message.message_id;
+  submission.photo_file_ids = photoFileIds;
+  submission.photo_unique_ids = photoUniqueIds.length ? photoUniqueIds : undefined;
+  submission.tg_message_ids = messageIds;
   submission.updated_at = nowIso();
   submission.edit_count += 1;
 

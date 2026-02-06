@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
-import { Sora, Noto_Sans_SC } from "next/font/google";
+import { Baloo_2, Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
+import PrimaryNav from "./components/primary-nav";
+import { MeProvider } from "./components/me-context";
 
-const sora = Sora({
+const baloo = Baloo_2({
   subsets: ["latin"],
   weight: ["400", "600", "700"],
-  variable: "--font-sora"
+  variable: "--font-display"
 });
 
 const notoSans = Noto_Sans_SC({
   subsets: ["latin"],
   weight: ["400", "500", "700"],
-  variable: "--font-noto"
+  variable: "--font-body"
 });
 
 export const metadata: Metadata = {
@@ -25,8 +27,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="zh-CN" className={`${sora.variable} ${notoSans.variable}`}>
-      <body>{children}</body>
+    <html lang="zh-CN" className={`${baloo.variable} ${notoSans.variable}`}>
+      <body>
+        <MeProvider>
+          <div className="app-shell">
+            <PrimaryNav />
+            <div className="app-content">{children}</div>
+          </div>
+        </MeProvider>
+      </body>
     </html>
   );
 }
