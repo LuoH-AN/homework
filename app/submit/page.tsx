@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useMe } from "../components/me-context";
 import FilePicker from "../components/file-picker";
-import { AVIF_UNSUPPORTED, compressImagesToAvif } from "../lib/image";
+import { COMPRESS_UNSUPPORTED, compressImagesToJpeg } from "../lib/image";
 
 // 判断作业是否已过期
 function isExpired(dueDate?: string) {
@@ -62,7 +62,7 @@ export default function SubmitPage() {
     }
     setBusy(true);
     try {
-      const compressed = await compressImagesToAvif(files);
+      const compressed = await compressImagesToJpeg(files);
       const form = new FormData();
       form.append("subject", subject);
       compressed.forEach((item) => form.append("image", item));
@@ -84,8 +84,8 @@ export default function SubmitPage() {
       setNotice("提交成功，已发送到群组");
       await refresh();
     } catch (err) {
-      if (err instanceof Error && err.message === AVIF_UNSUPPORTED) {
-        setError("当前浏览器不支持 AVIF 压缩，请更换浏览器后再试");
+      if (err instanceof Error && err.message === COMPRESS_UNSUPPORTED) {
+        setError("当前浏览器不支持图片压缩，请更换浏览器后再试");
       } else {
         setError("提交失败，请稍后再试");
       }

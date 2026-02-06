@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useMe } from "../components/me-context";
 import { formatLocal } from "../lib/format";
 import FilePicker from "../components/file-picker";
-import { AVIF_UNSUPPORTED, compressImagesToAvif } from "../lib/image";
+import { COMPRESS_UNSUPPORTED, compressImagesToJpeg } from "../lib/image";
 
 export default function HistoryPage() {
   const { loading, me, error: loadError, refresh } = useMe();
@@ -29,7 +29,7 @@ export default function HistoryPage() {
     }
     setEditBusy(submissionId);
     try {
-      const compressed = await compressImagesToAvif(files);
+      const compressed = await compressImagesToJpeg(files);
       const form = new FormData();
       form.append("submission_id", submissionId);
       compressed.forEach((item) => form.append("image", item));
@@ -47,8 +47,8 @@ export default function HistoryPage() {
       setEditFiles((prev) => ({ ...prev, [submissionId]: [] }));
       await refresh();
     } catch (err) {
-      if (err instanceof Error && err.message === AVIF_UNSUPPORTED) {
-        setError("当前浏览器不支持 AVIF 压缩，请更换浏览器后再试");
+      if (err instanceof Error && err.message === COMPRESS_UNSUPPORTED) {
+        setError("当前浏览器不支持图片压缩，请更换浏览器后再试");
       } else {
         setError("修改失败，请稍后再试");
       }

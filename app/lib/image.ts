@@ -1,13 +1,19 @@
-import type { EncodeOptions } from "@jsquash/avif/meta";
+const OUTPUT_MIME = "image/jpeg";
+const DEFAULT_QUALITY = 0.82;
+const COMPRESS_UNSUPPORTED = "IMAGE_COMPRESS_UNSUPPORTED";
 
-const AVIF_MIME = "image/avif";
-const AVIF_UNSUPPORTED = "AVIF_UNSUPPORTED";
+type JpegOptions = {
+  quality?: number;
+};
 
-type AvifOptions = Partial<EncodeOptions>;
+function clampQuality(value: number) {
+  if (Number.isNaN(value)) return DEFAULT_QUALITY;
+  return Math.min(1, Math.max(0, value));
+}
 
-function toAvifFilename(name: string) {
-  if (!name) return "upload.avif";
-  return name.replace(/\.[^/.]+$/, "") + ".avif";
+function toJpegFilename(name: string) {
+  if (!name) return "upload.jpg";
+  return name.replace(/\.[^/.]+$/, "") + ".jpg";
 }
 
 async function loadImageElement(file: File) {
@@ -33,7 +39,7 @@ async function loadImageElement(file: File) {
   return { img, revoke: () => URL.revokeObjectURL(url) };
 }
 
-async function getImageData(file: File) {
+async function drawToCanvas(file: File) {
   let bitmap: ImageBitmap | null = null;
   let revoke: (() => void) | null = null;
   let img: HTMLImageElement | null = null;
@@ -70,60 +76,65 @@ async function getImageData(file: File) {
     return null;
   }
 
-  const cleanup = () => {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
     if (bitmap && "close" in bitmap) bitmap.close();
     if (revoke) revoke();
-  };
+    return null;
+  }
+  ctx.imageSmoothingQuality = "high";
+  if (bitmap) {
+    ctx.drawImage(bitmap, 0, 0, width, height);
+  } else if (img) {
+    ctx.drawImage(img, 0, 0, width, height);
+  }
 
+  return {
+    canvas,
+    cleanup: () => {
+      if (bitmap && "close" in bitmap) bitmap.close();
+      if (revoke) revoke();
+    }
+  };
+}
+
+export async function compressImageToJpeg(file: File, options: JpegOptions = {}) {
+  if (typeof document === "undefined") {
+    throw new Error(COMPRESS_UNSUPPORTED);
+  }
+
+  const quality = clampQuality(options.quality ?? DEFAULT_QUALITY);
+  const prepared = await drawToCanvas(file);
+  if (!prepared) {
+    throw new Error(COMPRESS_UNSUPPORTED);
+  }
+
+  const { canvas, cleanup } = prepared;
   try {
-    const canvas = document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return null;
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((result) => resolve(result), OUTPUT_MIME, quality)
+    );
+    if (!blob) {
+      throw new Error(COMPRESS_UNSUPPORTED);
     }
-    ctx.imageSmoothingQuality = "high";
-    if (bitmap) {
-      ctx.drawImage(bitmap, 0, 0, width, height);
-    } else if (img) {
-      ctx.drawImage(img, 0, 0, width, height);
-    }
-    return ctx.getImageData(0, 0, width, height);
+    return new File([blob], toJpegFilename(file.name), {
+      type: OUTPUT_MIME,
+      lastModified: file.lastModified
+    });
   } finally {
     cleanup();
   }
 }
 
-export async function compressImageToAvif(file: File, options: AvifOptions = {}) {
-  if (file.type === AVIF_MIME) return file;
-  if (typeof document === "undefined") {
-    throw new Error(AVIF_UNSUPPORTED);
-  }
-
-  const imageData = await getImageData(file);
-  if (!imageData) {
-    throw new Error(AVIF_UNSUPPORTED);
-  }
-
-  try {
-    const { encode } = await import("@jsquash/avif");
-    const encoded = await encode(imageData, options);
-    return new File([encoded], toAvifFilename(file.name), {
-      type: AVIF_MIME,
-      lastModified: file.lastModified
-    });
-  } catch (err) {
-    throw new Error(AVIF_UNSUPPORTED);
-  }
-}
-
-export async function compressImagesToAvif(files: File[], options: AvifOptions = {}) {
+export async function compressImagesToJpeg(files: File[], options: JpegOptions = {}) {
   const results: File[] = [];
   for (const file of files) {
-    results.push(await compressImageToAvif(file, options));
+    results.push(await compressImageToJpeg(file, options));
   }
   return results;
 }
 
-export { AVIF_UNSUPPORTED };
+export { COMPRESS_UNSUPPORTED };
