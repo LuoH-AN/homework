@@ -15,7 +15,26 @@ export async function GET(request: Request) {
 
   const data = await loadData();
   const subjects = getSubjects();
-  const completions = (data.manual_completions ?? {})[date] ?? {};
+  const manual = (data.manual_completions ?? {})[date] ?? {};
+  const ignoredNames = new Set(["组长"]);
+
+  const completionSets = new Map<string, Set<string>>();
+  Object.entries(manual).forEach(([studentName, list]) => {
+    completionSets.set(studentName, new Set(list));
+  });
+
+  Object.values(data.submissions).forEach((submission) => {
+    if (!submission || ignoredNames.has(submission.student_name)) return;
+    const submissionDate = formatDate(new Date(submission.created_at));
+    if (submissionDate !== date) return;
+    const set = completionSets.get(submission.student_name) ?? new Set<string>();
+    set.add(submission.subject);
+    completionSets.set(submission.student_name, set);
+  });
+
+  const completions = Object.fromEntries(
+    Array.from(completionSets.entries()).map(([name, set]) => [name, Array.from(set)])
+  );
 
   const students = Object.entries(data.students)
     .filter(([, student]) => student && student.name !== "组长")
