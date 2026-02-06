@@ -22,8 +22,37 @@ export async function POST(request: Request) {
   }
 
   const data = await loadData();
-  if (data.name_index[name]) {
-    return NextResponse.json({ error: "姓名已被绑定" }, { status: 409 });
+  const existingToken = data.name_index[name];
+  if (existingToken) {
+    const newToken = crypto.randomUUID();
+    const student = data.students[existingToken];
+    if (student) {
+      data.students[newToken] = student;
+      delete data.students[existingToken];
+      data.name_index[name] = newToken;
+
+      const submissions = data.student_submissions[existingToken] ?? [];
+      data.student_submissions[newToken] = submissions;
+      delete data.student_submissions[existingToken];
+
+      submissions.forEach((id) => {
+        const submission = data.submissions[id];
+        if (submission) {
+          submission.student_token = newToken;
+          data.submissions[id] = submission;
+        }
+      });
+    } else {
+      data.students[newToken] = { name, created_at: nowIso() };
+      data.name_index[name] = newToken;
+      data.student_submissions[newToken] = [];
+    }
+
+    await saveData(data);
+
+    const response = NextResponse.json({ ok: true, name, rebound: true });
+    setToken(response, newToken);
+    return response;
   }
 
   const token = crypto.randomUUID();
