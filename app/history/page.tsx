@@ -89,81 +89,98 @@ export default function HistoryPage() {
         <section className="card animate-in">
           <h2 className="section-title">全部记录</h2>
           <div className="grid">
-            {me.submissions.map((submission) => (
-              <article key={submission.id} className="submission">
-                <div className="meta">
-                  <span>{submission.subject}</span>
-                  <span>提交：{formatLocal(submission.created_at)}</span>
-                </div>
-                <div className="review-row">
-                  <span
-                    className={`review-pill ${
-                      submission.review?.status === "reviewed"
-                        ? "is-reviewed"
-                        : ""
-                    }`}
-                  >
-                    {submission.review?.status === "reviewed" ? "已批改" : "待批改"}
-                  </span>
-                  {typeof submission.review?.score === "number" ? (
-                    <span className="review-score">
-                      分数：{submission.review.score}
-                    </span>
-                  ) : null}
-                </div>
-                {submission.review?.comment ? (
-                  <div className="review-comment">{submission.review.comment}</div>
-                ) : null}
-                {submission.note ? (
-                  <div className="note">留言：{submission.note}</div>
-                ) : null}
-                {submission.updated_at !== submission.created_at ? (
+            {me.submissions.map((submission) => {
+              const reviewStatus = submission.review?.status ?? "pending";
+              const statusLabel =
+                reviewStatus === "returned"
+                  ? "待修正"
+                  : reviewStatus === "reviewed"
+                    ? "已批改"
+                    : "待批改";
+              const statusClass =
+                reviewStatus === "returned"
+                  ? "is-returned"
+                  : reviewStatus === "reviewed"
+                    ? "is-reviewed"
+                    : "";
+              const isReturned = reviewStatus === "returned";
+
+              return (
+                <article key={submission.id} className="submission">
                   <div className="meta">
-                    <span>已修改</span>
-                    <span>更新：{formatLocal(submission.updated_at)}</span>
+                    <span>{submission.subject}</span>
+                    <span>提交：{formatLocal(submission.created_at)}</span>
                   </div>
-                ) : null}
-                <div className="submission-images">
-                  {submission.photo_file_ids.map((fileId, index) => (
-                    <img
-                      key={fileId}
-                      src={`/api/media?submission_id=${submission.id}&file_id=${fileId}`}
-                      alt={`${submission.subject} 作业图片 ${index + 1}`}
-                      loading="lazy"
-                    />
-                  ))}
-                </div>
-                {submission.editable ? (
-                  <form onSubmit={(event) => handleEdit(event, submission.id)}>
-                    <FilePicker
-                      id={`edit-file-${submission.id}`}
-                      label={`三天内可修改，截止 ${formatLocal(
-                        submission.edit_deadline
-                      )}`}
-                      files={editFiles[submission.id] ?? []}
-                      onChange={(selected) =>
-                        setEditFiles((prev) => ({
-                          ...prev,
-                          [submission.id]: selected
-                        }))
-                      }
-                      hint="可上传多张新图片（最多 10 张）"
-                    />
-                    <div className="form-actions">
-                      <button
-                        className="button ghost small"
-                        type="submit"
-                        disabled={editBusy === submission.id}
-                      >
-                        {editBusy === submission.id ? "修改中…" : "提交修改"}
-                      </button>
+                  <div className="review-row">
+                    <span className={`review-pill ${statusClass}`}>{statusLabel}</span>
+                    {typeof submission.review?.score === "number" ? (
+                      <span className="review-score">
+                        分数：{submission.review.score}
+                      </span>
+                    ) : null}
+                  </div>
+                  {submission.review?.comment ? (
+                    <div className="comment-block">
+                      <span className="comment-tag">老师</span>
+                      <div className="review-comment">{submission.review.comment}</div>
                     </div>
-                  </form>
-                ) : (
-                  <div className="notice">修改期已过</div>
-                )}
-              </article>
-            ))}
+                  ) : null}
+                  {submission.note ? (
+                    <div className="comment-block">
+                      <span className="comment-tag">你</span>
+                      <div className="note">{submission.note}</div>
+                    </div>
+                  ) : null}
+                  {submission.updated_at !== submission.created_at ? (
+                    <div className="meta">
+                      <span>已修改</span>
+                      <span>更新：{formatLocal(submission.updated_at)}</span>
+                    </div>
+                  ) : null}
+                  <div className="submission-images">
+                    {submission.photo_file_ids.map((fileId, index) => (
+                      <img
+                        key={fileId}
+                        src={`/api/media?submission_id=${submission.id}&file_id=${fileId}`}
+                        alt={`${submission.subject} 作业图片 ${index + 1}`}
+                        loading="lazy"
+                      />
+                    ))}
+                  </div>
+                  {submission.editable ? (
+                    <form onSubmit={(event) => handleEdit(event, submission.id)}>
+                      <FilePicker
+                        id={`edit-file-${submission.id}`}
+                        label={
+                          isReturned
+                            ? "老师打回，可重新提交"
+                            : `三天内可修改，截止 ${formatLocal(submission.edit_deadline)}`
+                        }
+                        files={editFiles[submission.id] ?? []}
+                        onChange={(selected) =>
+                          setEditFiles((prev) => ({
+                            ...prev,
+                            [submission.id]: selected
+                          }))
+                        }
+                        hint="可上传多张新图片（最多 10 张）"
+                      />
+                      <div className="form-actions">
+                        <button
+                          className="button ghost small"
+                          type="submit"
+                          disabled={editBusy === submission.id}
+                        >
+                          {editBusy === submission.id ? "修改中…" : "提交修改"}
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <div className="notice">修改期已过</div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         </section>
       ) : (

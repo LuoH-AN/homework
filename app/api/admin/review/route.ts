@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
   const body = (await request.json().catch(() => ({}))) as {
     submission_id?: string;
-    status?: "pending" | "reviewed";
+    status?: "pending" | "reviewed" | "returned";
     score?: number;
     comment?: string;
     reviewer?: string;
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
         ? body.score
         : undefined;
     submission.review = {
-      status: "reviewed",
+      status: body.status === "returned" ? "returned" : "reviewed",
       score,
       comment: body.comment?.trim() || undefined,
       reviewed_at: nowIso(),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { loadData } from "@/lib/store";
 import { formatDate } from "@/lib/date";
+import { getSubjects } from "@/lib/env";
 import {
   Document,
   Packer,
@@ -18,16 +19,29 @@ import {
 export const runtime = "nodejs";
 
 // 格式化时间为人性化格式
+function formatClock(iso: string) {
+  const date = new Date(iso);
+  const timeZone = process.env.TIMEZONE || "Asia/Shanghai";
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  }).format(date);
+}
+
 function formatTime(iso: string) {
   const date = new Date(iso);
-  return date.toLocaleString("zh-CN", {
+  const timeZone = process.env.TIMEZONE || "Asia/Shanghai";
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false
-  });
+  }).format(date);
 }
 
 export async function GET(request: Request) {
@@ -46,10 +60,10 @@ export async function GET(request: Request) {
   const data = await loadData();
   const submissions = Object.values(data.submissions).filter(Boolean);
   const students = data.students ?? {};
-  const subjects = new Set<string>();
-
-  // 收集所有科目
-  submissions.forEach((s) => subjects.add(s.subject));
+  const configuredSubjects = getSubjects();
+  const subjectList = configuredSubjects.length
+    ? configuredSubjects
+    : Array.from(new Set(submissions.map((submission) => submission.subject)));
 
   // 获取日期范围内的提交
   const filteredSubmissions = submissions.filter((submission) => {
@@ -57,18 +71,34 @@ export async function GET(request: Request) {
     return createdDate >= start && createdDate <= end;
   });
 
-  // 按日期分组
-  const submissionsByDate = new Map<string, typeof filteredSubmissions>();
-  filteredSubmissions.forEach((submission) => {
-    const date = formatDate(new Date(submission.created_at));
-    if (!submissionsByDate.has(date)) {
-      submissionsByDate.set(date, []);
+  // 获取所有学生名单
+  const allStudents: string[] = [];
+  const studentSet = new Set<string>();
+  Object.values(students).forEach((student) => {
+    if (!studentSet.has(student.name)) {
+      studentSet.add(student.name);
+      allStudents.push(student.name);
     }
-    submissionsByDate.get(date)!.push(submission);
+  });
+  filteredSubmissions.forEach((submission) => {
+    if (!studentSet.has(submission.student_name)) {
+      studentSet.add(submission.student_name);
+      allStudents.push(submission.student_name);
+    }
   });
 
-  // 获取所有学生名单
-  const allStudents = Object.values(students).map((s) => s.name);
+  const latestByStudentSubject = new Map<string, (typeof filteredSubmissions)[number]>();
+  filteredSubmissions.forEach((submission) => {
+    const key = `${submission.student_name}||${submission.subject}`;
+    const existing = latestByStudentSubject.get(key);
+    if (
+      !existing ||
+      new Date(submission.created_at).getTime() >
+        new Date(existing.created_at).getTime()
+    ) {
+      latestByStudentSubject.set(key, submission);
+    }
+  });
 
   // 创建表格行
   const tableRows: TableRow[] = [];
@@ -101,39 +131,39 @@ export async function GET(request: Request) {
     })
   );
 
-  // 按日期排序
-  const sortedDates = Array.from(submissionsByDate.keys()).sort();
+  if (allStudents.length && subjectList.length) {
+    allStudents.forEach((studentName) => {
+      subjectList.forEach((subject) => {
+        const key = `${studentName}||${subject}`;
+        const submission = latestByStudentSubject.get(key);
+        const date = submission ? formatDate(new Date(submission.created_at)) : "-";
+        const time = submission ? formatClock(submission.created_at) : "-";
+        const status = submission ? "已提交" : "未提交";
 
-  sortedDates.forEach((date) => {
-    const daySubmissions = submissionsByDate.get(date)!;
-
-    daySubmissions.forEach((submission) => {
-      tableRows.push(
-        new TableRow({
-          children: [
-            new TableCell({
-              children: [new Paragraph({ text: date })]
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: formatTime(submission.created_at) })]
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: submission.student_name })]
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: submission.subject })]
-            }),
-            new TableCell({
-              children: [new Paragraph({ text: "已提交" })]
-            })
-          ]
-        })
-      );
+        tableRows.push(
+          new TableRow({
+            children: [
+              new TableCell({
+                children: [new Paragraph({ text: date })]
+              }),
+              new TableCell({
+                children: [new Paragraph({ text: time })]
+              }),
+              new TableCell({
+                children: [new Paragraph({ text: studentName })]
+              }),
+              new TableCell({
+                children: [new Paragraph({ text: subject })]
+              }),
+              new TableCell({
+                children: [new Paragraph({ text: status })]
+              })
+            ]
+          })
+        );
+      });
     });
-  });
-
-  // 如果没有任何提交，添加一行空数据说明
-  if (tableRows.length === 1) {
+  } else {
     tableRows.push(
       new TableRow({
         children: [

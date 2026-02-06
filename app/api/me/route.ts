@@ -31,6 +31,7 @@ export async function GET() {
     )
     .map((submission) => {
       const deadline = addHours(submission.created_at, 72);
+      const isReturned = submission.review?.status === "returned";
       const legacyId = (submission as { photo_file_id?: string }).photo_file_id;
       return {
         id: submission.id,
@@ -43,7 +44,7 @@ export async function GET() {
             : legacyId
               ? [legacyId]
               : [],
-        editable: new Date() <= new Date(deadline),
+        editable: isReturned || new Date() <= new Date(deadline),
         edit_deadline: deadline,
         note: submission.note ?? "",
         review: submission.review ?? { status: "pending" }

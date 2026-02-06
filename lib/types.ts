@@ -5,7 +5,7 @@ export type Student = {
 };
 
 export type ReviewInfo = {
-  status: "pending" | "reviewed";
+  status: "pending" | "reviewed" | "returned";
   score?: number;
   comment?: string;
   reviewed_at?: string;

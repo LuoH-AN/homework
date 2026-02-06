@@ -17,7 +17,7 @@ import {
 } from "recharts";
 
 type ReviewInfo = {
-  status: "pending" | "reviewed";
+  status: "pending" | "reviewed" | "returned";
   score?: number;
   comment?: string;
   reviewed_at?: string;
@@ -352,7 +352,7 @@ export default function AdminPage() {
 
   async function handleReview(
     submissionId: string,
-    status: "reviewed" | "pending"
+    status: "reviewed" | "pending" | "returned"
   ) {
     setError(null);
     setNotice(null);
@@ -380,7 +380,13 @@ export default function AdminPage() {
         setError(payload?.error ?? "更新失败");
         return;
       }
-      setNotice(status === "reviewed" ? "已标记批改" : "已恢复待批改");
+      if (status === "reviewed") {
+        setNotice("已标记批改");
+      } else if (status === "returned") {
+        setNotice("已打回修正");
+      } else {
+        setNotice("已恢复待批改");
+      }
       await loadOverview();
     } catch (err) {
       setError("更新失败，请稍后再试");
@@ -828,7 +834,21 @@ export default function AdminPage() {
             <div className="section-title">待批改</div>
             {pendingSubmissions.length ? (
               <div className="admin-list">
-                {pendingSubmissions.map((submission) => (
+                {pendingSubmissions.map((submission) => {
+                  const reviewStatus = submission.review?.status ?? "pending";
+                  const statusLabel =
+                    reviewStatus === "returned"
+                      ? "已打回"
+                      : reviewStatus === "reviewed"
+                        ? "已批改"
+                        : "待批改";
+                  const statusClass =
+                    reviewStatus === "returned"
+                      ? "is-returned"
+                      : reviewStatus === "reviewed"
+                        ? "is-reviewed"
+                        : "";
+                  return (
                   <div className="admin-item" key={submission.id}>
                     <div className="admin-header">
                       <div>
@@ -839,7 +859,7 @@ export default function AdminPage() {
                           提交：{formatLocal(submission.created_at)}
                         </div>
                       </div>
-                      <span className="review-pill">待批改</span>
+                      <span className={`review-pill ${statusClass}`}>{statusLabel}</span>
                     </div>
                     {submission.note ? (
                       <div className="note">留言：{submission.note}</div>
@@ -891,6 +911,13 @@ export default function AdminPage() {
                       </div>
                       <div className="form-actions">
                         <button
+                          className="button ghost"
+                          type="button"
+                          onClick={() => handleReview(submission.id, "returned")}
+                        >
+                          打回修正
+                        </button>
+                        <button
                           className="button"
                           type="button"
                           onClick={() => handleReview(submission.id, "reviewed")}
@@ -900,7 +927,8 @@ export default function AdminPage() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="notice">暂无待批改作业</div>

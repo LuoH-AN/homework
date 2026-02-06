@@ -44,7 +44,8 @@ export async function POST(request: Request) {
 
   const deadline = new Date(submission.created_at);
   deadline.setHours(deadline.getHours() + 72);
-  if (new Date() > deadline) {
+  const isReturned = submission.review?.status === "returned";
+  if (!isReturned && new Date() > deadline) {
     return NextResponse.json({ error: "已超过修改期限" }, { status: 403 });
   }
 

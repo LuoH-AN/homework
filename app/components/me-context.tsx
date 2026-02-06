@@ -21,7 +21,7 @@ type SubmissionView = {
   photo_file_ids: string[];
   note: string;
   review: {
-    status: "pending" | "reviewed";
+    status: "pending" | "reviewed" | "returned";
     score?: number;
     comment?: string;
     reviewed_at?: string;
