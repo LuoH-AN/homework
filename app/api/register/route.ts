@@ -1,0 +1,39 @@
+import { NextResponse } from "next/server";
+import { getToken, setToken } from "@/lib/auth";
+import { loadData, saveData } from "@/lib/store";
+import { nowIso } from "@/lib/date";
+
+export const runtime = "nodejs";
+
+export async function POST(request: Request) {
+  const existingToken = getToken();
+  if (existingToken) {
+    return NextResponse.json({ ok: true });
+  }
+
+  const body = (await request.json().catch(() => ({}))) as { name?: string };
+  const name = body.name?.trim() ?? "";
+
+  if (!name || name.length > 24) {
+    return NextResponse.json(
+      { error: "姓名不能为空且长度需小于 24" },
+      { status: 400 }
+    );
+  }
+
+  const data = await loadData();
+  if (data.name_index[name]) {
+    return NextResponse.json({ error: "姓名已被绑定" }, { status: 409 });
+  }
+
+  const token = crypto.randomUUID();
+  data.students[token] = { name, created_at: nowIso() };
+  data.name_index[name] = token;
+  data.student_submissions[token] = [];
+
+  await saveData(data);
+
+  const response = NextResponse.json({ ok: true, name });
+  setToken(response, token);
+  return response;
+}

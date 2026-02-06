@@ -1,0 +1,240 @@
+:root {
+  color-scheme: light;
+  --font-sans: var(--font-noto), "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-display: var(--font-sora), "PingFang SC", "Microsoft YaHei", sans-serif;
+  --ink: #141623;
+  --muted: #5a6172;
+  --line: rgba(20, 22, 35, 0.12);
+  --paper: rgba(255, 255, 255, 0.86);
+  --accent: #ff7a59;
+  --accent-2: #2563eb;
+  --glow: rgba(255, 122, 89, 0.18);
+  --shadow: 0 18px 60px rgba(20, 22, 35, 0.12);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background-color: #f3f4f8;
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 12% 10%, rgba(255, 122, 89, 0.18), transparent 42%),
+    radial-gradient(circle at 85% 5%, rgba(37, 99, 235, 0.18), transparent 40%),
+    linear-gradient(130deg, rgba(255, 255, 255, 0.6), rgba(243, 244, 248, 0.9));
+  background-attachment: fixed;
+}
+
+main {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 42px);
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.subtitle {
+  color: var(--muted);
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+.card {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(16px);
+}
+
+.section-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  margin: 0 0 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+label {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+input[type="text"],
+input[type="file"],
+select {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 15px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.subjects {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.subject-button {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subject-button.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--glow);
+  color: var(--accent);
+}
+
+.button {
+  border: none;
+  padding: 10px 18px;
+  border-radius: 12px;
+  font-size: 15px;
+  cursor: pointer;
+  background: linear-gradient(135deg, var(--accent), #ffb199);
+  color: #1f0d08;
+  font-weight: 600;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(255, 122, 89, 0.28);
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.button.ghost {
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.submission {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.submission img {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1e3a8a;
+  font-size: 12px;
+}
+
+.notice {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1e3a8a;
+  font-size: 14px;
+}
+
+.error {
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(220, 38, 38, 0.12);
+  color: #991b1b;
+  font-size: 14px;
+}
+
+.animate-in {
+  animation: fadeUp 0.6s ease both;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 720px) {
+  main {
+    padding: 32px 18px 48px;
+  }
+
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
