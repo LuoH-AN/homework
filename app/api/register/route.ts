@@ -6,8 +6,8 @@ import { nowIso } from "@/lib/date";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const existingToken = await getToken();
-  if (existingToken) {
+  const existingCookieToken = await getToken();
+  if (existingCookieToken) {
     return NextResponse.json({ ok: true });
   }
 
@@ -22,18 +22,18 @@ export async function POST(request: Request) {
   }
 
   const data = await loadData();
-  const existingToken = data.name_index[name];
-  if (existingToken) {
+  const existingNameToken = data.name_index[name];
+  if (existingNameToken) {
     const newToken = crypto.randomUUID();
-    const student = data.students[existingToken];
+    const student = data.students[existingNameToken];
     if (student) {
       data.students[newToken] = student;
-      delete data.students[existingToken];
+      delete data.students[existingNameToken];
       data.name_index[name] = newToken;
 
-      const submissions = data.student_submissions[existingToken] ?? [];
+      const submissions = data.student_submissions[existingNameToken] ?? [];
       data.student_submissions[newToken] = submissions;
-      delete data.student_submissions[existingToken];
+      delete data.student_submissions[existingNameToken];
 
       submissions.forEach((id) => {
         const submission = data.submissions[id];
