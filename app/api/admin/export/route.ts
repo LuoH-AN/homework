@@ -60,22 +60,27 @@ export async function GET(request: Request) {
   const data = await loadData();
   const submissions = Object.values(data.submissions).filter(Boolean);
   const students = data.students ?? {};
+  const ignoredNames = new Set(["组长"]);
   const configuredSubjects = getSubjects();
-  const subjectList = configuredSubjects.length
-    ? configuredSubjects
-    : Array.from(new Set(submissions.map((submission) => submission.subject)));
 
   // 获取日期范围内的提交
   const filteredSubmissions = submissions.filter((submission) => {
     const createdDate = formatDate(new Date(submission.created_at));
-    return createdDate >= start && createdDate <= end;
+    return (
+      createdDate >= start &&
+      createdDate <= end &&
+      !ignoredNames.has(submission.student_name)
+    );
   });
+  const subjectList = configuredSubjects.length
+    ? configuredSubjects
+    : Array.from(new Set(filteredSubmissions.map((submission) => submission.subject)));
 
   // 获取所有学生名单
   const allStudents: string[] = [];
   const studentSet = new Set<string>();
   Object.values(students).forEach((student) => {
-    if (!studentSet.has(student.name)) {
+    if (!ignoredNames.has(student.name) && !studentSet.has(student.name)) {
       studentSet.add(student.name);
       allStudents.push(student.name);
     }
