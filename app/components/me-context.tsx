@@ -38,6 +38,8 @@ type ReminderView = {
 type MeResponse = {
   registered: boolean;
   student?: { name: string };
+  manual_completion_date?: string;
+  manual_completed_subjects?: string[];
   subjects: string[];
   submissions: SubmissionView[];
   assignments: Array<{

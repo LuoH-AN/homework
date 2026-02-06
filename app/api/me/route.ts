@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { addHours } from "@/lib/date";
+import { addHours, formatDate } from "@/lib/date";
 import { getToken } from "@/lib/auth";
 import { getSubjects } from "@/lib/env";
 import { loadData } from "@/lib/store";
@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const subjects = getSubjects();
+  const today = formatDate(new Date());
   const token = await getToken();
   const data = await loadData();
   const reminders = normalizeReminders(data.reminders);
@@ -16,6 +17,8 @@ export async function GET() {
   if (!token || !data.students[token]) {
     return NextResponse.json({
       registered: false,
+      manual_completion_date: today,
+      manual_completed_subjects: [],
       subjects,
       submissions: [],
       assignments: (data.assignments ?? []).filter((item) => item.active),
@@ -24,6 +27,9 @@ export async function GET() {
   }
 
   const student = data.students[token];
+  const manualCompletions = data.manual_completions ?? {};
+  const manualCompleted =
+    manualCompletions[today]?.[student.name] ?? [];
   const submissionIds = data.student_submissions[token] ?? [];
   const submissions = submissionIds
     .map((id) => data.submissions[id])
@@ -57,6 +63,8 @@ export async function GET() {
   return NextResponse.json({
     registered: true,
     student: { name: student.name },
+    manual_completion_date: today,
+    manual_completed_subjects: manualCompleted,
     subjects,
     submissions,
     assignments: (data.assignments ?? []).filter((item) => item.active),

@@ -11,6 +11,7 @@ function createEmptyData(): DataFile {
     name_index: {},
     submissions: {},
     student_submissions: {},
+    manual_completions: {},
     assignments: [],
     reminders: defaultReminders()
   };
@@ -80,6 +81,7 @@ function migrateData(raw: any): DataFile {
   if (raw?.version === 3) {
     return {
       ...raw,
+      manual_completions: raw.manual_completions ?? {},
       assignments: raw.assignments ?? [],
       reminders: normalizeReminders(raw.reminders)
     } as DataFile;
@@ -98,6 +100,7 @@ function migrateData(raw: any): DataFile {
     name_index: raw.name_index ?? {},
     submissions,
     student_submissions: raw.student_submissions ?? {},
+    manual_completions: raw.manual_completions ?? {},
     assignments: raw.assignments ?? [],
     reminders: defaultReminders()
   };

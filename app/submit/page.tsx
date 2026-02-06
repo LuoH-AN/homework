@@ -17,7 +17,7 @@ function isExpired(dueDate?: string) {
 }
 
 export default function SubmitPage() {
-  const { loading, me, error: loadError, refresh } = useMe();
+  const { loading, me, error: loadError, refresh, setError: setLoadError } = useMe();
   const [subject, setSubject] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [note, setNote] = useState("");
@@ -43,6 +43,24 @@ export default function SubmitPage() {
       setSubject(subjects[0]);
     }
   }, [subjects, subject]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
+    if (!loadError) return;
+    const timer = window.setTimeout(() => setLoadError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [loadError, setLoadError]);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -112,8 +130,8 @@ export default function SubmitPage() {
         </div>
       </header>
 
-      {loadError ? <div className="error animate-in">{loadError}</div> : null}
-      {error ? <div className="error animate-in">{error}</div> : null}
+      {loadError ? <div className="error toast animate-in">{loadError}</div> : null}
+      {error ? <div className="error toast animate-in">{error}</div> : null}
       {notice ? <div className="notice toast animate-in">{notice}</div> : null}
 
       {loading && !me ? (

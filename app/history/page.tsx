@@ -1,18 +1,36 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMe } from "../components/me-context";
 import { formatLocal } from "../lib/format";
 import FilePicker from "../components/file-picker";
 import { COMPRESS_UNSUPPORTED, compressImagesToJpeg } from "../lib/image";
 
 export default function HistoryPage() {
-  const { loading, me, error: loadError, refresh } = useMe();
+  const { loading, me, error: loadError, refresh, setError: setLoadError } = useMe();
   const [editFiles, setEditFiles] = useState<Record<string, File[]>>({});
   const [editBusy, setEditBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
+    if (!loadError) return;
+    const timer = window.setTimeout(() => setLoadError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [loadError, setLoadError]);
 
   async function handleEdit(event: React.FormEvent, submissionId: string) {
     event.preventDefault();
@@ -75,8 +93,8 @@ export default function HistoryPage() {
         </div>
       </header>
 
-      {loadError ? <div className="error animate-in">{loadError}</div> : null}
-      {error ? <div className="error animate-in">{error}</div> : null}
+      {loadError ? <div className="error toast animate-in">{loadError}</div> : null}
+      {error ? <div className="error toast animate-in">{error}</div> : null}
       {notice ? <div className="notice toast animate-in">{notice}</div> : null}
 
       {loading && !me ? (

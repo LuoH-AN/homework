@@ -63,6 +63,7 @@ export async function GET(request: Request) {
   const students = data.students ?? {};
   const ignoredNames = new Set(["组长"]);
   const configuredSubjects = getSubjects();
+  const manualCompletions = data.manual_completions ?? {};
 
   // 获取日期范围内的提交
   const filteredSubmissions = submissions.filter((submission) => {
@@ -73,9 +74,32 @@ export async function GET(request: Request) {
       !ignoredNames.has(submission.student_name)
     );
   });
+  const manualEntries: Array<{
+    student_name: string;
+    subject: string;
+    created_at: string;
+  }> = [];
+
+  Object.entries(manualCompletions).forEach(([date, byStudent]) => {
+    if (date < start || date > end) return;
+    if (!byStudent) return;
+    const created_at = new Date(`${date}T12:00:00`).toISOString();
+    Object.entries(byStudent).forEach(([studentName, subjects]) => {
+      if (ignoredNames.has(studentName)) return;
+      subjects.forEach((subject) => {
+        manualEntries.push({ student_name: studentName, subject, created_at });
+      });
+    });
+  });
+
   const subjectList = configuredSubjects.length
     ? configuredSubjects
-    : Array.from(new Set(filteredSubmissions.map((submission) => submission.subject)));
+    : Array.from(
+        new Set([
+          ...filteredSubmissions.map((submission) => submission.subject),
+          ...manualEntries.map((entry) => entry.subject)
+        ])
+      );
 
   // 获取所有学生名单
   const allStudents: string[] = [];
@@ -92,6 +116,12 @@ export async function GET(request: Request) {
       allStudents.push(submission.student_name);
     }
   });
+  manualEntries.forEach((entry) => {
+    if (!studentSet.has(entry.student_name)) {
+      studentSet.add(entry.student_name);
+      allStudents.push(entry.student_name);
+    }
+  });
 
   const latestByStudentSubject = new Map<string, (typeof filteredSubmissions)[number]>();
   filteredSubmissions.forEach((submission) => {
@@ -103,6 +133,17 @@ export async function GET(request: Request) {
         new Date(existing.created_at).getTime()
     ) {
       latestByStudentSubject.set(key, submission);
+    }
+  });
+  manualEntries.forEach((entry) => {
+    const key = `${entry.student_name}||${entry.subject}`;
+    const existing = latestByStudentSubject.get(key);
+    if (!existing) {
+      latestByStudentSubject.set(key, entry as (typeof filteredSubmissions)[number]);
+      return;
+    }
+    if (new Date(entry.created_at).getTime() > new Date(existing.created_at).getTime()) {
+      latestByStudentSubject.set(key, entry as (typeof filteredSubmissions)[number]);
     }
   });
 
@@ -117,7 +158,7 @@ export async function GET(request: Request) {
           children: [new TextRun({ text, bold })]
         })
       ],
-      width: { size: width, type: WidthType.PERCENTAGE }
+      width: { size: width * 50, type: WidthType.PERCENTAGE }
     });
   }
 
@@ -204,7 +245,7 @@ export async function GET(request: Request) {
           new Paragraph({
             children: [
               new TextRun({
-                text: `共 ${filteredSubmissions.length} 条提交记录`,
+                text: `共 ${filteredSubmissions.length + manualEntries.length} 条提交记录`,
                 size: 20,
                 italics: true
               })

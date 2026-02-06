@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useMe } from "./components/me-context";
 import { formatDateOnly, formatLocal } from "./lib/format";
 import { defaultReminders } from "../lib/reminders";
@@ -22,7 +22,7 @@ function getTodayString() {
 }
 
 export default function Home() {
-  const { loading, syncing, me, error } = useMe();
+  const { loading, syncing, me, error, setError } = useMe();
 
   const latest = useMemo(() => {
     if (!me?.submissions?.length) return null;
@@ -46,6 +46,10 @@ export default function Home() {
         .filter((s) => s.created_at.slice(0, 10) === today)
         .map((s) => s.subject)
     );
+    const manualDate = me?.manual_completion_date ?? "";
+    const manualSubjects =
+      manualDate === today ? (me?.manual_completed_subjects ?? []) : [];
+    manualSubjects.forEach((subject) => submittedSubjectsToday.add(subject));
 
     // 活跃的未过期作业
     const activeAssignments = assignments.filter(
@@ -85,6 +89,12 @@ export default function Home() {
     }
   );
 
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error, setError]);
+
   return (
     <main className="page">
       <header className="page-header">
@@ -101,7 +111,7 @@ export default function Home() {
         </div>
       </header>
 
-      {error ? <div className="error animate-in">{error}</div> : null}
+      {error ? <div className="error toast animate-in">{error}</div> : null}
 
       {loading && !me ? (
         <section className="card animate-in">加载中…</section>

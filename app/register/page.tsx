@@ -1,15 +1,33 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMe } from "../components/me-context";
 
 export default function RegisterPage() {
-  const { loading, me, error: loadError, refresh } = useMe();
+  const { loading, me, error: loadError, refresh, setError: setLoadError } = useMe();
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
+  useEffect(() => {
+    if (!loadError) return;
+    const timer = window.setTimeout(() => setLoadError(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [loadError, setLoadError]);
 
   async function handleRegister(event: React.FormEvent) {
     event.preventDefault();
@@ -60,8 +78,8 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      {loadError ? <div className="error animate-in">{loadError}</div> : null}
-      {error ? <div className="error animate-in">{error}</div> : null}
+      {loadError ? <div className="error toast animate-in">{loadError}</div> : null}
+      {error ? <div className="error toast animate-in">{error}</div> : null}
       {notice ? <div className="notice toast animate-in">{notice}</div> : null}
 
       {loading && !me ? (

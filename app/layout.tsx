@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Baloo_2, Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
-import PrimaryNav from "./components/primary-nav";
+import NavShell from "./components/nav-shell";
 import { MeProvider } from "./components/me-context";
 
 const baloo = Baloo_2({
@@ -31,7 +31,7 @@ export default function RootLayout({
       <body>
         <MeProvider>
           <div className="app-shell">
-            <PrimaryNav />
+            <NavShell />
             <div className="app-content">{children}</div>
           </div>
         </MeProvider>

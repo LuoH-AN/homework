@@ -59,6 +59,7 @@ export type DataFile = {
   name_index: Record<string, string>;
   submissions: Record<string, Submission>;
   student_submissions: Record<string, string[]>;
+  manual_completions?: Record<string, Record<string, string[]>>;
   assignments: Assignment[];
   reminders: Reminder[];
 };
