@@ -1,9 +1,11 @@
 const OUTPUT_MIME = "image/jpeg";
-const DEFAULT_QUALITY = 0.82;
+const DEFAULT_QUALITY = 0.5;
+const DEFAULT_MAX_DIMENSION = 1920;
 const COMPRESS_UNSUPPORTED = "IMAGE_COMPRESS_UNSUPPORTED";
 
 type JpegOptions = {
   quality?: number;
+  maxDimension?: number;
 };
 
 function clampQuality(value: number) {
@@ -11,9 +13,27 @@ function clampQuality(value: number) {
   return Math.min(1, Math.max(0, value));
 }
 
+function clampDimension(value: number) {
+  if (Number.isNaN(value)) return DEFAULT_MAX_DIMENSION;
+  return Math.max(256, Math.round(value));
+}
+
 function toJpegFilename(name: string) {
   if (!name) return "upload.jpg";
   return name.replace(/\.[^/.]+$/, "") + ".jpg";
+}
+
+function getTargetSize(width: number, height: number, maxDimension: number) {
+  const longest = Math.max(width, height);
+  if (!longest || longest <= maxDimension) {
+    return { width, height, scale: 1 };
+  }
+  const scale = maxDimension / longest;
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+    scale
+  };
 }
 
 async function loadImageElement(file: File) {
@@ -32,7 +52,7 @@ async function loadImageElement(file: File) {
   return { img, revoke: () => URL.revokeObjectURL(url) };
 }
 
-async function drawToCanvas(file: File) {
+async function drawToCanvas(file: File, maxDimension: number) {
   let bitmap: ImageBitmap | null = null;
   let revoke: (() => void) | null = null;
   let img: HTMLImageElement | null = null;
@@ -69,9 +89,10 @@ async function drawToCanvas(file: File) {
     return null;
   }
 
+  const target = getTargetSize(width, height, maxDimension);
   const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = target.width;
+  canvas.height = target.height;
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     if (bitmap && "close" in bitmap) bitmap.close();
@@ -80,9 +101,9 @@ async function drawToCanvas(file: File) {
   }
   ctx.imageSmoothingQuality = "high";
   if (bitmap) {
-    ctx.drawImage(bitmap, 0, 0, width, height);
+    ctx.drawImage(bitmap, 0, 0, target.width, target.height);
   } else if (img) {
-    ctx.drawImage(img, 0, 0, width, height);
+    ctx.drawImage(img, 0, 0, target.width, target.height);
   }
 
   return {
@@ -100,7 +121,8 @@ export async function compressImageToJpeg(file: File, options: JpegOptions = {})
   }
 
   const quality = clampQuality(options.quality ?? DEFAULT_QUALITY);
-  const prepared = await drawToCanvas(file);
+  const maxDimension = clampDimension(options.maxDimension ?? DEFAULT_MAX_DIMENSION);
+  const prepared = await drawToCanvas(file, maxDimension);
   if (!prepared) {
     throw new Error(COMPRESS_UNSUPPORTED);
   }
