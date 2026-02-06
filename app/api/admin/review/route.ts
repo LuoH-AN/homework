@@ -6,7 +6,7 @@ import { nowIso } from "@/lib/date";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const guard = requireAdmin(request);
+  const guard = await requireAdmin(request);
   if (guard) return guard;
 
   const body = (await request.json().catch(() => ({}))) as {

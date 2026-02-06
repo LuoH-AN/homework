@@ -6,7 +6,7 @@ import { getSubjects } from "@/lib/env";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const guard = requireAdmin(request);
+  const guard = await requireAdmin(request);
   if (guard) return guard;
 
   const data = await loadData();

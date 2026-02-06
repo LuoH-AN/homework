@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 
 export async function GET() {
   const subjects = getSubjects();
-  const token = getToken();
+  const token = await getToken();
   const data = await loadData();
 
   if (!token || !data.students[token]) {

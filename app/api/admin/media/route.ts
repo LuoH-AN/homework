@@ -6,7 +6,7 @@ import { getFileById } from "@/lib/telegram";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const guard = requireAdmin(request);
+  const guard = await requireAdmin(request);
   if (guard) return guard;
 
   const { searchParams } = new URL(request.url);

@@ -6,7 +6,7 @@ import { nowIso } from "@/lib/date";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const existingToken = getToken();
+  const existingToken = await getToken();
   if (existingToken) {
     return NextResponse.json({ ok: true });
   }

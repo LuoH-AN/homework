@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "参数缺失" }, { status: 400 });
   }
 
-  const token = getToken();
+  const token = await getToken();
   if (!token) {
     return NextResponse.json({ error: "未授权" }, { status: 401 });
   }

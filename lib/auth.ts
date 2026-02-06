@@ -3,8 +3,8 @@ import type { NextResponse } from "next/server";
 
 const TOKEN_COOKIE = "hw_token";
 
-export function getToken(): string | null {
-  const store = cookies();
+export async function getToken(): Promise<string | null> {
+  const store = await cookies();
   return store.get(TOKEN_COOKIE)?.value ?? null;
 }
 

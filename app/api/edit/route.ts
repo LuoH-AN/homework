@@ -8,7 +8,7 @@ import { sendHomeworkPhotos } from "@/lib/telegram";
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  const token = getToken();
+  const token = await getToken();
   if (!token) {
     return NextResponse.json({ error: "未绑定姓名" }, { status: 401 });
   }

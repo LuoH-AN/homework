@@ -4,14 +4,15 @@ import { getAdminSecret } from "./env";
 
 const ADMIN_COOKIE = "hw_admin";
 
-export function requireAdmin(request: Request) {
+export async function requireAdmin(request: Request) {
   const secret = getAdminSecret();
   if (!secret) {
     return NextResponse.json({ error: "未配置管理员" }, { status: 404 });
   }
 
   const provided = request.headers.get("x-admin-secret");
-  const cookieSecret = cookies().get(ADMIN_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const cookieSecret = cookieStore.get(ADMIN_COOKIE)?.value;
 
   if (provided === secret || cookieSecret === secret) {
     return null;
