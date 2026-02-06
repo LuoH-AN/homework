@@ -797,6 +797,22 @@ textarea::placeholder {
   gap: 8px;
 }
 
+.completion-tags .subject-button {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.completion-tags .subject-button.is-complete {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: #dcfce7;
+  color: #166534;
+}
+
+.completion-tags .subject-button[aria-disabled="true"] {
+  cursor: default;
+}
+
 .meta {
   display: flex;
   justify-content: space-between;

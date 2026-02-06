@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { loadData, saveData } from "@/lib/store";
 import { getSubjects } from "@/lib/env";
+import { formatDate } from "@/lib/date";
 
 export const runtime = "nodejs";
 
@@ -23,6 +24,11 @@ export async function POST(request: Request) {
 
   if (!date || !studentName || !subject) {
     return NextResponse.json({ error: "参数不完整" }, { status: 400 });
+  }
+
+  const today = formatDate(new Date());
+  if (date !== today) {
+    return NextResponse.json({ error: "仅支持标记今天的作业" }, { status: 400 });
   }
 
   const data = await loadData();

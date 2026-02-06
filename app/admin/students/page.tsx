@@ -14,7 +14,7 @@ export default function AdminStudentsPage() {
   const [students, setStudents] = useState<AdminStudent[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);
   const [completions, setCompletions] = useState<Record<string, string[]>>({});
-  const [selectedDate, setSelectedDate] = useState(todayString());
+  const [selectedDate] = useState(todayString());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -344,16 +344,11 @@ export default function AdminStudentsPage() {
 
           <section className="card animate-in">
             <div className="section-title">作业完成情况</div>
-            <p className="hint">选择日期后，可手动标记完成科目。</p>
+            <p className="hint">仅支持标记今天的作业完成情况，点击红色科目即可标记为完成。</p>
             <p className="hint">手动标记仅用于统计与导出，不会生成图片提交。</p>
             <div className="field">
               <label htmlFor="completion-date">日期</label>
-              <input
-                id="completion-date"
-                type="date"
-                value={selectedDate}
-                onChange={(event) => setSelectedDate(event.target.value)}
-              />
+              <input id="completion-date" type="date" value={selectedDate} disabled />
             </div>
             {subjects.length ? (
               <div className="completion-grid">
@@ -367,17 +362,23 @@ export default function AdminStudentsPage() {
                       <div className="completion-name">{student.name}</div>
                       <div className="completion-tags">
                         {subjects.map((subject) => {
-                          const selected = (completions[student.name] ?? []).includes(subject);
-                          return (
-                            <button
-                              key={`${student.name}-${subject}`}
-                              type="button"
-                              className={`subject-button ${selected ? "active" : ""}`}
-                              onClick={() => toggleCompletion(student.name, subject)}
-                            >
-                              {subject}
-                            </button>
-                          );
+                        const selected = (completions[student.name] ?? []).includes(subject);
+                        return (
+                          <button
+                            key={`${student.name}-${subject}`}
+                            type="button"
+                            className={`subject-button ${
+                              selected ? "is-complete" : "is-missing"
+                            }`}
+                            onClick={() => {
+                              if (selected) return;
+                              toggleCompletion(student.name, subject);
+                            }}
+                            aria-disabled={selected}
+                          >
+                            {subject}
+                          </button>
+                        );
                         })}
                       </div>
                     </div>
