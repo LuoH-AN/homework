@@ -1,6 +1,7 @@
 import { nowIso } from "./date";
 import type { DataFile } from "./types";
 import { getStoragePinnedMessage, getFileById, pinStorageMessage, sendStorageDocument } from "./telegram";
+import { defaultReminders, normalizeReminders } from "./reminders";
 
 function createEmptyData(): DataFile {
   return {
@@ -10,7 +11,8 @@ function createEmptyData(): DataFile {
     name_index: {},
     submissions: {},
     student_submissions: {},
-    assignments: []
+    assignments: [],
+    reminders: defaultReminders()
   };
 }
 
@@ -78,7 +80,8 @@ function migrateData(raw: any): DataFile {
   if (raw?.version === 3) {
     return {
       ...raw,
-      assignments: raw.assignments ?? []
+      assignments: raw.assignments ?? [],
+      reminders: normalizeReminders(raw.reminders)
     } as DataFile;
   }
 
@@ -95,7 +98,8 @@ function migrateData(raw: any): DataFile {
     name_index: raw.name_index ?? {},
     submissions,
     student_submissions: raw.student_submissions ?? {},
-    assignments: raw.assignments ?? []
+    assignments: raw.assignments ?? [],
+    reminders: defaultReminders()
   };
 }
 

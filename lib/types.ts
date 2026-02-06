@@ -30,6 +30,12 @@ export type SubmissionHistory = {
   tg_message_ids: number[];
 };
 
+export type Reminder = {
+  title: string;
+  body: string;
+  meta: string;
+};
+
 export type Submission = {
   id: string;
   student_token: string;
@@ -54,4 +60,5 @@ export type DataFile = {
   submissions: Record<string, Submission>;
   student_submissions: Record<string, string[]>;
   assignments: Assignment[];
+  reminders: Reminder[];
 };

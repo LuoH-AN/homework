@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { formatLocal } from "../lib/format";
+import { defaultReminders } from "../../lib/reminders";
 import {
   PieChart,
   Pie,
@@ -44,11 +45,18 @@ type Assignment = {
   active: boolean;
 };
 
+type ReminderItem = {
+  title: string;
+  body: string;
+  meta: string;
+};
+
 type OverviewResponse = {
   ok: boolean;
   subjects: string[];
   assignments: Assignment[];
   submissions: AdminSubmission[];
+  reminders: ReminderItem[];
 };
 
 const STORAGE_KEY = "admin_secret";
@@ -69,6 +77,10 @@ export default function AdminPage() {
   const [assignTitle, setAssignTitle] = useState("");
   const [assignDue, setAssignDue] = useState(getTomorrow());
   const [assignDesc, setAssignDesc] = useState("");
+  const [reminderDrafts, setReminderDrafts] = useState<ReminderItem[]>(
+    defaultReminders()
+  );
+  const reminderTouchedRef = useRef(false);
   const [reviewDrafts, setReviewDrafts] = useState<
     Record<string, { score: string; comment: string }>
   >({});
@@ -175,6 +187,12 @@ export default function AdminPage() {
       void loginAndLoad(saved);
     }
   }, []);
+
+  useEffect(() => {
+    if (overview?.reminders?.length && !reminderTouchedRef.current) {
+      setReminderDrafts(overview.reminders);
+    }
+  }, [overview]);
 
   async function loginAndLoad(nextSecret?: string) {
     const token = nextSecret ?? secret;
@@ -433,6 +451,38 @@ export default function AdminPage() {
     }
   }
 
+  async function handleSaveReminders() {
+    setError(null);
+    setNotice(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/reminders", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-admin-secret": secret
+        },
+        body: JSON.stringify({ reminders: reminderDrafts })
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(payload?.error ?? "更新失败");
+        return;
+      }
+      const nextReminders = Array.isArray(payload?.reminders)
+        ? payload.reminders
+        : reminderDrafts;
+      reminderTouchedRef.current = false;
+      setReminderDrafts(nextReminders);
+      setOverview((prev) => (prev ? { ...prev, reminders: nextReminders } : prev));
+      setNotice("提醒已更新");
+    } catch (err) {
+      setError("更新失败，请稍后再试");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="page">
       <header className="page-header">
@@ -444,7 +494,7 @@ export default function AdminPage() {
       </header>
 
       {error ? <div className="error animate-in">{error}</div> : null}
-      {notice ? <div className="notice animate-in">{notice}</div> : null}
+      {notice ? <div className="notice toast animate-in">{notice}</div> : null}
 
       {!overview ? (
         <section className="card animate-in">
@@ -601,6 +651,75 @@ export default function AdminPage() {
                 </button>
               </div>
             </form>
+          </section>
+
+          <section className="card animate-in">
+            <div className="section-title">今日提醒</div>
+            <p className="hint">支持 {`{today}`} 自动替换为当天日期。</p>
+            <div className="reminder-editor">
+              {reminderDrafts.map((item, index) => (
+                <div className="reminder-card" key={`reminder-${index}`}>
+                  <div className="field">
+                    <label>标题</label>
+                    <input
+                      type="text"
+                      value={item.title}
+                      onChange={(event) => {
+                        reminderTouchedRef.current = true;
+                        const value = event.target.value;
+                        setReminderDrafts((prev) =>
+                          prev.map((entry, i) =>
+                            i === index ? { ...entry, title: value } : entry
+                          )
+                        );
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>内容</label>
+                    <textarea
+                      rows={2}
+                      value={item.body}
+                      onChange={(event) => {
+                        reminderTouchedRef.current = true;
+                        const value = event.target.value;
+                        setReminderDrafts((prev) =>
+                          prev.map((entry, i) =>
+                            i === index ? { ...entry, body: value } : entry
+                          )
+                        );
+                      }}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>补充信息</label>
+                    <input
+                      type="text"
+                      value={item.meta}
+                      onChange={(event) => {
+                        reminderTouchedRef.current = true;
+                        const value = event.target.value;
+                        setReminderDrafts((prev) =>
+                          prev.map((entry, i) =>
+                            i === index ? { ...entry, meta: value } : entry
+                          )
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="form-actions">
+              <button
+                className="button"
+                type="button"
+                onClick={handleSaveReminders}
+                disabled={loading}
+              >
+                {loading ? "保存中…" : "保存提醒"}
+              </button>
+            </div>
           </section>
 
           <section className="animate-in">

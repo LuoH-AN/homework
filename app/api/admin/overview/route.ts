@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { loadData } from "@/lib/store";
 import { getSubjects } from "@/lib/env";
+import { normalizeReminders } from "@/lib/reminders";
 
 export const runtime = "nodejs";
 
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
 
   const data = await loadData();
   const subjects = getSubjects();
+  const reminders = normalizeReminders(data.reminders);
 
   const submissions = Object.values(data.submissions)
     .filter((submission) => Boolean(submission) && submission.student_name !== "组长")
@@ -33,6 +35,7 @@ export async function GET(request: Request) {
     ok: true,
     subjects,
     assignments: data.assignments ?? [],
-    submissions
+    submissions,
+    reminders
   });
 }

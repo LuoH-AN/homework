@@ -71,7 +71,7 @@ export default function HistoryPage() {
 
       {loadError ? <div className="error animate-in">{loadError}</div> : null}
       {error ? <div className="error animate-in">{error}</div> : null}
-      {notice ? <div className="notice animate-in">{notice}</div> : null}
+      {notice ? <div className="notice toast animate-in">{notice}</div> : null}
 
       {loading && !me ? (
         <section className="card animate-in">加载中…</section>
@@ -108,16 +108,16 @@ export default function HistoryPage() {
               return (
                 <article key={submission.id} className="submission">
                   <div className="meta">
-                    <span>{submission.subject}</span>
+                    <div className="meta-left">
+                      <span>{submission.subject}</span>
+                      <span className={`review-pill ${statusClass}`}>{statusLabel}</span>
+                      {typeof submission.review?.score === "number" ? (
+                        <span className="review-score">
+                          分数：{submission.review.score}
+                        </span>
+                      ) : null}
+                    </div>
                     <span>提交：{formatLocal(submission.created_at)}</span>
-                  </div>
-                  <div className="review-row">
-                    <span className={`review-pill ${statusClass}`}>{statusLabel}</span>
-                    {typeof submission.review?.score === "number" ? (
-                      <span className="review-score">
-                        分数：{submission.review.score}
-                      </span>
-                    ) : null}
                   </div>
                   {submission.review?.comment ? (
                     <div className="comment-block">

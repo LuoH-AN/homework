@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { useMe } from "./components/me-context";
 import { formatDateOnly, formatLocal } from "./lib/format";
+import { defaultReminders } from "../lib/reminders";
 
 // 判断作业是否已过期
 function isExpired(dueDate?: string) {
@@ -74,6 +75,15 @@ export default function Home() {
   const syncText = loading && !me ? "连接中" : syncing ? "同步中" : "已同步";
   const statusText = me?.registered ? "已登记" : "未登记";
   const studentName = me?.student?.name ?? "同学";
+  const reminders = (me?.reminders?.length ? me.reminders : defaultReminders()).map(
+    (item) => {
+      const todayLabel = formatDateOnly(new Date().toISOString());
+      const meta = item.meta
+        .replaceAll("{today}", todayLabel)
+        .replaceAll("{{today}}", todayLabel);
+      return { ...item, meta };
+    }
+  );
 
   return (
     <main className="page">
@@ -205,21 +215,13 @@ export default function Home() {
           <section className="card animate-in">
             <div className="section-title">今日提醒</div>
             <div className="reminder-grid">
-              <div className="reminder">
-                <div className="reminder-title">上传时间</div>
-                <div className="reminder-body">建议在当天 22:00 前完成提交。</div>
-                <div className="reminder-meta">{formatDateOnly(new Date().toISOString())}</div>
-              </div>
-              <div className="reminder">
-                <div className="reminder-title">修改窗口</div>
-                <div className="reminder-body">提交后 3 天内可上传新版图片。</div>
-                <div className="reminder-meta">支持自动标记更新</div>
-              </div>
-              <div className="reminder">
-                <div className="reminder-title">图片质量</div>
-                <div className="reminder-body">保持清晰，避免过度裁剪或反光。</div>
-                <div className="reminder-meta">推荐横向拍摄</div>
-              </div>
+              {reminders.map((item, index) => (
+                <div className="reminder" key={`${item.title}-${index}`}>
+                  <div className="reminder-title">{item.title}</div>
+                  <div className="reminder-body">{item.body}</div>
+                  {item.meta ? <div className="reminder-meta">{item.meta}</div> : null}
+                </div>
+              ))}
             </div>
           </section>
         </>

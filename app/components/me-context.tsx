@@ -29,6 +29,12 @@ type SubmissionView = {
   };
 };
 
+type ReminderView = {
+  title: string;
+  body: string;
+  meta: string;
+};
+
 type MeResponse = {
   registered: boolean;
   student?: { name: string };
@@ -42,6 +48,7 @@ type MeResponse = {
     due_date?: string;
     active: boolean;
   }>;
+  reminders: ReminderView[];
 };
 
 type MeContextValue = {

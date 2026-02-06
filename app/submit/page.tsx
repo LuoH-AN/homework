@@ -108,7 +108,7 @@ export default function SubmitPage() {
 
       {loadError ? <div className="error animate-in">{loadError}</div> : null}
       {error ? <div className="error animate-in">{error}</div> : null}
-      {notice ? <div className="notice animate-in">{notice}</div> : null}
+      {notice ? <div className="notice toast animate-in">{notice}</div> : null}
 
       {loading && !me ? (
         <section className="card animate-in">加载中…</section>

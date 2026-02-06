@@ -3,6 +3,7 @@ import { addHours } from "@/lib/date";
 import { getToken } from "@/lib/auth";
 import { getSubjects } from "@/lib/env";
 import { loadData } from "@/lib/store";
+import { normalizeReminders } from "@/lib/reminders";
 
 export const runtime = "nodejs";
 
@@ -10,13 +11,15 @@ export async function GET() {
   const subjects = getSubjects();
   const token = await getToken();
   const data = await loadData();
+  const reminders = normalizeReminders(data.reminders);
 
   if (!token || !data.students[token]) {
     return NextResponse.json({
       registered: false,
       subjects,
       submissions: [],
-      assignments: (data.assignments ?? []).filter((item) => item.active)
+      assignments: (data.assignments ?? []).filter((item) => item.active),
+      reminders
     });
   }
 
@@ -56,6 +59,7 @@ export async function GET() {
     student: { name: student.name },
     subjects,
     submissions,
-    assignments: (data.assignments ?? []).filter((item) => item.active)
+    assignments: (data.assignments ?? []).filter((item) => item.active),
+    reminders
   });
 }
