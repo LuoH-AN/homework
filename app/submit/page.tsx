@@ -16,17 +16,7 @@ export default function SubmitPage() {
   const [busy, setBusy] = useState(false);
 
   const subjects = useMemo(() => me?.subjects ?? [], [me]);
-  const assignments = useMemo(() => me?.assignments ?? [], [me]);
-
-  // 活跃的作业（服务端已过滤过期的）
-  const activeAssignments = useMemo(() => {
-    return assignments;
-  }, [assignments]);
-
-  // 已过期的作业（服务端已判断）
-  const expiredAssignments = useMemo(() => {
-    return me?.expired_assignments ?? [];
-  }, [me]);
+  const activeAssignments = useMemo(() => me?.assignments ?? [], [me]);
 
   useEffect(() => {
     if (!subject && subjects.length) {
@@ -142,25 +132,6 @@ export default function SubmitPage() {
                     ) : null}
                     {item.description ? (
                       <div className="assignment-desc">{item.description}</div>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {expiredAssignments.length ? (
-            <section className="card animate-in">
-              <h2 className="section-title">已过期作业</h2>
-              <div className="assignment-list expired">
-                {expiredAssignments.map((item) => (
-                  <div className="assignment-item expired" key={item.id}>
-                    <div className="assignment-title">
-                      {item.title ? `${item.subject} · ${item.title}` : item.subject}
-                      <span className="expired-tag">已截止</span>
-                    </div>
-                    {item.due_date ? (
-                      <div className="assignment-meta">截止：{item.due_date}</div>
                     ) : null}
                   </div>
                 ))}

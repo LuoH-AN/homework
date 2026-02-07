@@ -22,7 +22,6 @@ export default function Home() {
   // 计算作业状态
   const assignmentStatus = useMemo(() => {
     const assignments = me?.assignments ?? [];
-    const submissions = me?.submissions ?? [];
 
     // 今天提交的科目 + 手动标记完成的科目（均由服务端计算，时区一致）
     const submittedSubjectsToday = new Set(
@@ -44,11 +43,8 @@ export default function Home() {
       (item) => !submittedSubjectsToday.has(item.subject)
     );
 
-    // 已逾期（服务端已判断的过期作业，且没有提交过）
-    const allSubmittedSubjects = new Set(submissions.map((s) => s.subject));
-    const expired = (me?.expired_assignments ?? []).filter(
-      (item) => !allSubmittedSubjects.has(item.subject)
-    );
+    // 已逾期（服务端已排除提交过和手动标记过的）
+    const expired = me?.expired_assignments ?? [];
 
     return { completed, pending, expired };
   }, [me]);

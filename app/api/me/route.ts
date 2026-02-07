@@ -43,12 +43,25 @@ export async function GET() {
 
   const student = data.students[token];
   const manualCompletions = data.manual_completions ?? {};
-  const manualCompleted =
+  const manualCompletedToday =
     manualCompletions[today]?.[student.name] ?? [];
+
+  // 收集该学生所有日期的手动标记完成科目
+  const allManualCompletedSubjects = new Set<string>();
+  for (const dateEntries of Object.values(manualCompletions)) {
+    const subjects_for_student = dateEntries[student.name];
+    if (subjects_for_student) {
+      subjects_for_student.forEach((s) => allManualCompletedSubjects.add(s));
+    }
+  }
+
   const submissionIds = data.student_submissions[token] ?? [];
   const rawSubmissions = submissionIds
     .map((id) => data.submissions[id])
     .filter(Boolean);
+
+  // 所有提交过的科目
+  const allSubmittedSubjects = new Set(rawSubmissions.map((s) => s.subject));
 
   // 使用服务端时区判断今天提交的科目
   const submittedSubjectsToday = Array.from(
@@ -57,6 +70,13 @@ export async function GET() {
         .filter((s) => formatDate(new Date(s.created_at)) === today)
         .map((s) => s.subject)
     )
+  );
+
+  // 过期作业中排除已完成的（提交过或手动标记过的）
+  const filteredExpired = expiredAssignments.filter(
+    (item) =>
+      !allSubmittedSubjects.has(item.subject) &&
+      !allManualCompletedSubjects.has(item.subject)
   );
 
   const submissions = rawSubmissions
@@ -90,12 +110,12 @@ export async function GET() {
     registered: true,
     student: { name: student.name },
     manual_completion_date: today,
-    manual_completed_subjects: manualCompleted,
+    manual_completed_subjects: manualCompletedToday,
     submitted_subjects_today: submittedSubjectsToday,
     subjects,
     submissions,
     assignments: activeAssignments,
-    expired_assignments: expiredAssignments,
+    expired_assignments: filteredExpired,
     reminders
   });
 }
