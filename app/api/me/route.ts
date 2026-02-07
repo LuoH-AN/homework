@@ -7,6 +7,11 @@ import { normalizeReminders } from "@/lib/reminders";
 
 export const runtime = "nodejs";
 
+function isExpiredServer(dueDate: string | undefined, today: string) {
+  if (!dueDate) return false;
+  return dueDate < today;
+}
+
 export async function GET() {
   const subjects = getSubjects();
   const today = formatDate(new Date());
@@ -14,14 +19,24 @@ export async function GET() {
   const data = await loadData();
   const reminders = normalizeReminders(data.reminders);
 
+  const allAssignments = data.assignments ?? [];
+  const activeAssignments = allAssignments.filter(
+    (item) => item.active && !isExpiredServer(item.due_date, today)
+  );
+  const expiredAssignments = allAssignments.filter(
+    (item) => item.active && isExpiredServer(item.due_date, today)
+  );
+
   if (!token || !data.students[token]) {
     return NextResponse.json({
       registered: false,
       manual_completion_date: today,
       manual_completed_subjects: [],
+      submitted_subjects_today: [],
       subjects,
       submissions: [],
-      assignments: (data.assignments ?? []).filter((item) => item.active),
+      assignments: activeAssignments,
+      expired_assignments: expiredAssignments,
       reminders
     });
   }
@@ -31,9 +46,20 @@ export async function GET() {
   const manualCompleted =
     manualCompletions[today]?.[student.name] ?? [];
   const submissionIds = data.student_submissions[token] ?? [];
-  const submissions = submissionIds
+  const rawSubmissions = submissionIds
     .map((id) => data.submissions[id])
-    .filter(Boolean)
+    .filter(Boolean);
+
+  // 使用服务端时区判断今天提交的科目
+  const submittedSubjectsToday = Array.from(
+    new Set(
+      rawSubmissions
+        .filter((s) => formatDate(new Date(s.created_at)) === today)
+        .map((s) => s.subject)
+    )
+  );
+
+  const submissions = rawSubmissions
     .sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -65,9 +91,11 @@ export async function GET() {
     student: { name: student.name },
     manual_completion_date: today,
     manual_completed_subjects: manualCompleted,
+    submitted_subjects_today: submittedSubjectsToday,
     subjects,
     submissions,
-    assignments: (data.assignments ?? []).filter((item) => item.active),
+    assignments: activeAssignments,
+    expired_assignments: expiredAssignments,
     reminders
   });
 }

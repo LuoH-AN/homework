@@ -35,21 +35,25 @@ type ReminderView = {
   meta: string;
 };
 
+type AssignmentView = {
+  id: string;
+  subject: string;
+  title: string;
+  description?: string;
+  due_date?: string;
+  active: boolean;
+};
+
 type MeResponse = {
   registered: boolean;
   student?: { name: string };
   manual_completion_date?: string;
   manual_completed_subjects?: string[];
+  submitted_subjects_today?: string[];
   subjects: string[];
   submissions: SubmissionView[];
-  assignments: Array<{
-    id: string;
-    subject: string;
-    title: string;
-    description?: string;
-    due_date?: string;
-    active: boolean;
-  }>;
+  assignments: AssignmentView[];
+  expired_assignments?: AssignmentView[];
   reminders: ReminderView[];
 };
 

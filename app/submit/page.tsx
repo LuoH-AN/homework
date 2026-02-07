@@ -6,16 +6,6 @@ import { useMe } from "../components/me-context";
 import FilePicker from "../components/file-picker";
 import { COMPRESS_UNSUPPORTED, compressImagesToJpeg } from "../lib/image";
 
-// 判断作业是否已过期
-function isExpired(dueDate?: string) {
-  if (!dueDate) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate);
-  due.setHours(23, 59, 59, 999);
-  return due < today;
-}
-
 export default function SubmitPage() {
   const { loading, me, error: loadError, refresh, setError: setLoadError } = useMe();
   const [subject, setSubject] = useState("");
@@ -28,15 +18,15 @@ export default function SubmitPage() {
   const subjects = useMemo(() => me?.subjects ?? [], [me]);
   const assignments = useMemo(() => me?.assignments ?? [], [me]);
 
-  // 活跃的作业（未过期）
+  // 活跃的作业（服务端已过滤过期的）
   const activeAssignments = useMemo(() => {
-    return assignments.filter((item) => item.active && !isExpired(item.due_date));
+    return assignments;
   }, [assignments]);
 
-  // 已过期的作业
+  // 已过期的作业（服务端已判断）
   const expiredAssignments = useMemo(() => {
-    return assignments.filter((item) => !item.active || isExpired(item.due_date));
-  }, [assignments]);
+    return me?.expired_assignments ?? [];
+  }, [me]);
 
   useEffect(() => {
     if (!subject && subjects.length) {

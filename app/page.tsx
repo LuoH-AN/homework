@@ -6,21 +6,6 @@ import { useMe } from "./components/me-context";
 import { formatDateOnly, formatLocal } from "./lib/format";
 import { defaultReminders } from "../lib/reminders";
 
-// 判断作业是否已过期
-function isExpired(dueDate?: string) {
-  if (!dueDate) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate);
-  due.setHours(23, 59, 59, 999);
-  return due < today;
-}
-
-// 获取今天的日期字符串 (YYYY-MM-DD)
-function getTodayString() {
-  return new Date().toISOString().slice(0, 10);
-}
-
 export default function Home() {
   const { loading, syncing, me, error, setError } = useMe();
 
@@ -38,25 +23,18 @@ export default function Home() {
   const assignmentStatus = useMemo(() => {
     const assignments = me?.assignments ?? [];
     const submissions = me?.submissions ?? [];
-    const today = getTodayString();
 
-    // 今天提交的科目
+    // 今天提交的科目 + 手动标记完成的科目（均由服务端计算，时区一致）
     const submittedSubjectsToday = new Set(
-      submissions
-        .filter((s) => s.created_at.slice(0, 10) === today)
-        .map((s) => s.subject)
+      me?.submitted_subjects_today ?? []
     );
-    const manualDate = me?.manual_completion_date ?? "";
-    const manualSubjects =
-      manualDate === today ? (me?.manual_completed_subjects ?? []) : [];
+    const manualSubjects = me?.manual_completed_subjects ?? [];
     manualSubjects.forEach((subject) => submittedSubjectsToday.add(subject));
 
-    // 活跃的未过期作业
-    const activeAssignments = assignments.filter(
-      (item) => item.active && !isExpired(item.due_date)
-    );
+    // 活跃的未过期作业（服务端已过滤过期的）
+    const activeAssignments = assignments;
 
-    // 已完成（今天已提交）
+    // 已完成（今天已提交或手动标记）
     const completed = activeAssignments.filter((item) =>
       submittedSubjectsToday.has(item.subject)
     );
@@ -66,11 +44,10 @@ export default function Home() {
       (item) => !submittedSubjectsToday.has(item.subject)
     );
 
-    // 已逾期（有截止日期且已过期，且没有提交过）
+    // 已逾期（服务端已判断的过期作业，且没有提交过）
     const allSubmittedSubjects = new Set(submissions.map((s) => s.subject));
-    const expired = assignments.filter(
-      (item) =>
-        isExpired(item.due_date) && !allSubmittedSubjects.has(item.subject)
+    const expired = (me?.expired_assignments ?? []).filter(
+      (item) => !allSubmittedSubjects.has(item.subject)
     );
 
     return { completed, pending, expired };

@@ -2,21 +2,16 @@ import { NextResponse } from "next/server";
 import { buildSubmitCaption } from "@/lib/captions";
 import { getToken } from "@/lib/auth";
 import { getSubjects } from "@/lib/env";
-import { nowIso } from "@/lib/date";
+import { formatDate, nowIso } from "@/lib/date";
 import { loadData, saveData } from "@/lib/store";
 import { sendHomeworkPhotos } from "@/lib/telegram";
 import type { Submission } from "@/lib/types";
 
 export const runtime = "nodejs";
 
-// 判断作业是否已过期
-function isExpired(dueDate?: string) {
+function isExpiredServer(dueDate: string | undefined, today: string) {
   if (!dueDate) return false;
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate);
-  due.setHours(23, 59, 59, 999);
-  return due < today;
+  return dueDate < today;
 }
 
 export async function POST(request: Request) {
@@ -44,9 +39,10 @@ export async function POST(request: Request) {
   }
 
   // 检查该科目是否有活跃的未过期作业
+  const today = formatDate(new Date());
   const assignments = data.assignments ?? [];
   const activeAssignment = assignments.find(
-    (item) => item.subject === subject && item.active && !isExpired(item.due_date)
+    (item) => item.subject === subject && item.active && !isExpiredServer(item.due_date, today)
   );
   if (!activeAssignment) {
     return NextResponse.json({ error: "该科目没有可提交的作业或已过期" }, { status: 400 });
