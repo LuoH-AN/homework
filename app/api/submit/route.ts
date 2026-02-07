@@ -11,7 +11,7 @@ export const runtime = "nodejs";
 
 function isExpiredServer(dueDate: string | undefined, today: string) {
   if (!dueDate) return false;
-  return dueDate < today;
+  return dueDate <= today;
 }
 
 export async function POST(request: Request) {

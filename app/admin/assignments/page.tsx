@@ -17,10 +17,11 @@ function getTomorrow() {
 function isExpired(dueDate?: string) {
   if (!dueDate) return false;
   const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate);
-  due.setHours(23, 59, 59, 999);
-  return due < today;
+  const y = today.getFullYear();
+  const m = String(today.getMonth() + 1).padStart(2, "0");
+  const d = String(today.getDate()).padStart(2, "0");
+  const todayStr = `${y}-${m}-${d}`;
+  return dueDate <= todayStr;
 }
 
 export default function AdminAssignmentsPage() {
